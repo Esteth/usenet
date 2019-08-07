@@ -2,6 +2,10 @@ package yenc
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/hex"
+	"hash"
+	"hash/crc32"
 	"io"
 	"regexp"
 	"strconv"
@@ -23,6 +27,7 @@ type Reader struct {
 	foundHeader    bool
 	header         header
 	overflowBuffer []byte
+	hash 		   hash.Hash
 }
 
 // NewReader creates a new reader reading the given reader.
@@ -40,6 +45,7 @@ func NewReader(r io.Reader) (*Reader, error) {
 func (z *Reader) Reset(r io.Reader) error {
 	*z = Reader{
 		s: *bufio.NewScanner(r),
+		hash: crc32.New(crc32.MakeTable(crc32.IEEE)),
 	}
 	return nil
 }
@@ -76,7 +82,7 @@ func (z *Reader) Read(buf []byte) (n int, err error) {
 			// Ignore all text until we find the yEnc begin header
 			if strings.HasPrefix(z.s.Text(), "=ybegin") {
 				z.foundHeader = true
-				z.header, err = parseHeader(z.s.Text())
+				z.header, err = parseBegin(z.s.Text())
 				if err != nil {
 					return n, errors.Wrap(err, "Failed to parse ybegin header")
 				}
@@ -84,11 +90,10 @@ func (z *Reader) Read(buf []byte) (n int, err error) {
 		} else {
 			if strings.HasPrefix(z.s.Text(), "=yend") {
 				z.foundHeader = false
-				// TODO: Parse Footer and perform CRC/length checks
-				// _, err = parseFooter(z.s.Text())
-				// if err != nil {
-				// 	return 0, errors.Wrap(err, "Failed to parse yend header")
-				// }
+				err = z.validateEnd(z.s.Text())
+				if err != nil {
+					return n, errors.Wrap(err, "Failed to validate footer")
+				}
 				continue
 			} else {
 				break
@@ -103,6 +108,7 @@ func (z *Reader) Read(buf []byte) (n int, err error) {
 
 func (z *Reader) readLine(output []byte, input []byte) (n int, err error) {
 	escapeNext := false
+	// TODO: Can we save ourselves from writing one byte at a time?
 	for i, b := range input {
 		if b == '=' && !escapeNext {
 			// '=' is the escape character in yEnc. It shouldn't appear in the
@@ -122,6 +128,7 @@ func (z *Reader) readLine(output []byte, input []byte) (n int, err error) {
 		if n < len(output) {
 			output[n] = b
 			n++
+			z.hash.Write([]byte{b}) // Hash.Write can never fail
 		} else {
 			z.overflowBuffer = input[i:]
 			return
@@ -130,21 +137,52 @@ func (z *Reader) readLine(output []byte, input []byte) (n int, err error) {
 	return
 }
 
-func parseHeader(headerText string) (h header, err error) {
-	fields := strings.Fields(headerText)[1:]
+func parseBegin(beginLine string) (h header, err error) {
+	fields, err := parseHeader(beginLine)
+	if err != nil {
+		return header{}, errors.Wrapf(err, "Failed to parse ybegin line: %v", beginLine)
+	}
+
+	h.lineLength, err = strconv.Atoi(fields["line"])
+	if err != nil {
+		return header{}, errors.Wrapf(err, "could not convert ybegin field \"%v\" to int", fields["line"])
+	}
+	return
+}
+
+func (z *Reader) validateEnd(endLine string) error {
+	fields, err := parseHeader(endLine)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to parse yend line: %v", endLine)
+	}
+
+	// Only conduct a CRC32 check if the checksum is present in the footer
+	if expectedString, ok := fields["crc32"]; ok {
+		expected, err := hex.DecodeString(expectedString)
+		if err != nil {
+			return errors.Wrapf(err, "CRC32 Check Failure. Could not parse checksum %s", expectedString)
+		}
+		actual := z.hash.Sum(nil)
+
+		if !bytes.Equal(expected, actual) {
+			return errors.Errorf("CRC32 Check failure. Expected %v, Actual %v", expected, actual)
+		}
+	}
+	return nil
+}
+
+func parseHeader(line string) (m map[string]string, err error) {
+	fields := strings.Fields(line)[1:]
+	m = make(map[string]string, len(fields))
 	for _, field := range fields {
 		re := regexp.MustCompile(`(\w+)=(\w+)`)
 		result := re.FindSubmatch([]byte(field))
 		if result == nil || len(result) == 0 {
-			return header{}, errors.Wrapf(err, "Failed to parse header field \"%v\"", field)
+			return nil, errors.Wrapf(err, "Failed to parse header field \"%v\"", field)
 		}
-		key := string(result[0][1])
-		val := string(result[0][2])
-
-		if key == "line" {
-			h.lineLength, err = strconv.Atoi(val)
-		}
+		key := string(result[1])
+		val := string(result[2])
+		m[key] = val
 	}
-
 	return
 }
