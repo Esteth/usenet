@@ -69,9 +69,8 @@ func (z *Reader) Read(buf []byte) (n int, err error) {
 			if (n > 0) {
 				// Most Reader clients expect 0, EOF, so save the EOF for the next Read call
 				return n, nil
-			} else {
-				return n, io.EOF
 			}
+			return n, io.EOF
 		}
 		if !z.foundHeader {
 			// Ignore all text until we find the yEnc begin header
