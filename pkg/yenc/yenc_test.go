@@ -77,3 +77,29 @@ func TestSmallBuffer(t *testing.T) {
 		}
 	}
 }
+
+func TestFilename(t *testing.T) {
+	encodedFile, err := os.Open("testdata/encoded.txt")
+	defer encodedFile.Close()
+	if err != nil {
+		t.Fatalf("Could not open encoded data file: %v", err)
+	}
+
+	yencReader, err := NewReader(encodedFile)
+	if err != nil {
+		t.Fatalf("Could not initialize yenc Reader: %v", err)
+	}
+
+	_, err = ioutil.ReadAll(yencReader)
+	if err != nil {
+		t.Fatalf("Failed to read encoded data file: %v", err)
+	}
+
+	filename, err :=  yencReader.Filename()
+	if err != nil {
+		t.Fatalf("Failed to read filename: %v", err)
+	}
+	if filename != "testfile.txt" {
+		t.Fatalf("Read filename '%s' not equal to expected filename 'testfile.txt'", filename)
+	}
+}

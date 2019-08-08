@@ -108,6 +108,16 @@ func (z *Reader) Read(buf []byte) (n int, err error) {
 	return
 }
 
+// Filename returns the filename specified in the ybegin header.
+//
+// If no header has been read, it returns an error.
+func (z *Reader) Filename() (string, error) {
+	if z.header.name == "" {
+		return "", errors.New("Cannot determine filename until ybegin header has been read")
+	}
+	return z.header.name, nil
+}
+
 // readLine reads a single line of input data from intput into output.
 // It returns the number of bytes written to output and and error.
 //
@@ -214,7 +224,7 @@ func parseHeader(line string) (m map[string]string, err error) {
 	fields := strings.Fields(line)[1:]
 	m = make(map[string]string, len(fields))
 	for _, field := range fields {
-		re := regexp.MustCompile(`(\w+)=(\w+)`)
+		re := regexp.MustCompile(`(\w+)=([^\s]+)`)
 		result := re.FindSubmatch([]byte(field))
 		if result == nil || len(result) == 0 {
 			return nil, errors.Wrapf(err, "Failed to parse header field \"%v\"", field)
