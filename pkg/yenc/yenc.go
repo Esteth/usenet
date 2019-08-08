@@ -16,6 +16,7 @@ import (
 
 type header struct {
 	lineLength int
+	size 	   int64
 }
 
 // A Reader is an io.Reader that can be read to retrieve
@@ -152,8 +153,18 @@ func parseBegin(beginLine string) (h header, err error) {
 
 	h.lineLength, err = strconv.Atoi(fields["line"])
 	if err != nil {
-		return header{}, errors.Wrapf(err, "could not convert ybegin field \"%v\" to int", fields["line"])
+		return header{}, errors.Wrapf(err, "could not convert 'line' to int: %s", fields["line"])
 	}
+
+	if size, ok := fields["size"]; ok {
+		h.size, err = strconv.ParseInt(size, 10, 0)
+		if err != nil {
+			return header{}, errors.Wrapf(err, "could not convert 'size' to int: %s", fields["size"])
+		}
+	} else {
+		return header{}, errors.New("ybegin header does not contain size field")
+	}
+	
 	return
 }
 
@@ -175,6 +186,18 @@ func (z *Reader) validateEnd(endLine string) error {
 		if !bytes.Equal(expected, actual) {
 			return errors.Errorf("CRC32 Check failure. Expected %v, Actual %v", expected, actual)
 		}
+	}
+
+	if sizeString, ok := fields["size"]; ok {
+		size, err := strconv.ParseInt(sizeString, 10, 0)
+		if err != nil {
+			return errors.Wrap(err, "size validation failure: Could not parse size in footer")
+		}
+		if size != z.header.size {
+			return errors.New("header and foter do not agree on size. Could not validate")
+		}
+	} else {
+		return errors.New("no size found in footer. Could not validate")
 	}
 	return nil
 }
