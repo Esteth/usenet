@@ -106,6 +106,10 @@ func (z *Reader) Read(buf []byte) (n int, err error) {
 	return
 }
 
+// readLine reads a single line of input data from intput into output.
+// It returns the number of bytes written to output and and error.
+//
+// Note: readLine should only be called when the Reader is positioned between ybegin and yend. 
 func (z *Reader) readLine(output []byte, input []byte) (n int, err error) {
 	// Before we return, add all the bytes we wrote to the ongoing CRC32
 	defer func() { z.hash.Write(output[:n]) }()
@@ -139,6 +143,7 @@ func (z *Reader) readLine(output []byte, input []byte) (n int, err error) {
 	return
 }
 
+// parseBegin parses a "=ybegin" header line, returning it and an error
 func parseBegin(beginLine string) (h header, err error) {
 	fields, err := parseHeader(beginLine)
 	if err != nil {
@@ -152,6 +157,7 @@ func parseBegin(beginLine string) (h header, err error) {
 	return
 }
 
+// validateEnd validates a "=yend" header line, returning an error if it does not validate
 func (z *Reader) validateEnd(endLine string) error {
 	fields, err := parseHeader(endLine)
 	if err != nil {
@@ -173,6 +179,7 @@ func (z *Reader) validateEnd(endLine string) error {
 	return nil
 }
 
+// parseHeader parses a yenc header line, returning a map of the fields contained in it and an error.
 func parseHeader(line string) (m map[string]string, err error) {
 	fields := strings.Fields(line)[1:]
 	m = make(map[string]string, len(fields))
