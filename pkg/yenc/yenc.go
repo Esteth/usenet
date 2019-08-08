@@ -27,7 +27,7 @@ type Reader struct {
 	foundHeader    bool
 	header         header
 	overflowBuffer []byte
-	hash 		   hash.Hash
+	hash           hash.Hash
 }
 
 // NewReader creates a new reader reading the given reader.
@@ -44,7 +44,7 @@ func NewReader(r io.Reader) (*Reader, error) {
 // This permits reusing a reader rather than allocating a new one.
 func (z *Reader) Reset(r io.Reader) error {
 	*z = Reader{
-		s: *bufio.NewScanner(r),
+		s:    *bufio.NewScanner(r),
 		hash: crc32.New(crc32.MakeTable(crc32.IEEE)),
 	}
 	return nil
@@ -60,8 +60,8 @@ func (z *Reader) Read(buf []byte) (n int, err error) {
 		z.overflowBuffer = nil
 		n, err = z.readLine(buf, overflowBuffer)
 		// Need to continue to read if we have exhausted the overflow but not the input
-		if (n == len(buf)) {
-			return	
+		if n == len(buf) {
+			return
 		}
 	}
 	for {
@@ -72,7 +72,7 @@ func (z *Reader) Read(buf []byte) (n int, err error) {
 			}
 			// We found the end of the file
 			z.err = io.EOF
-			if (n > 0) {
+			if n > 0 {
 				// Most Reader clients expect 0, EOF, so save the EOF for the next Read call
 				return n, nil
 			}
@@ -131,6 +131,7 @@ func (z *Reader) readLine(output []byte, input []byte) (n int, err error) {
 			output[n] = b
 			n++
 		} else {
+			// If we've run out of space in the output buffer, save the overflow in the Reader
 			z.overflowBuffer = input[i:]
 			return
 		}
