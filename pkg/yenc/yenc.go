@@ -107,8 +107,10 @@ func (z *Reader) Read(buf []byte) (n int, err error) {
 }
 
 func (z *Reader) readLine(output []byte, input []byte) (n int, err error) {
+	// Before we return, add all the bytes we wrote to the ongoing CRC32
+	defer func() { z.hash.Write(output[:n]) }()
+
 	escapeNext := false
-	// TODO: Can we save ourselves from writing one byte at a time?
 	for i, b := range input {
 		if b == '=' && !escapeNext {
 			// '=' is the escape character in yEnc. It shouldn't appear in the
@@ -128,7 +130,6 @@ func (z *Reader) readLine(output []byte, input []byte) (n int, err error) {
 		if n < len(output) {
 			output[n] = b
 			n++
-			z.hash.Write([]byte{b}) // Hash.Write can never fail
 		} else {
 			z.overflowBuffer = input[i:]
 			return
