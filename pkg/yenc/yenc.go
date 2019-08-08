@@ -16,6 +16,7 @@ import (
 
 type header struct {
 	lineLength int
+	name       string
 	size 	   int64
 }
 
@@ -163,6 +164,12 @@ func parseBegin(beginLine string) (h header, err error) {
 		}
 	} else {
 		return header{}, errors.New("ybegin header does not contain size field")
+	}
+
+	if name, ok := fields["name"]; ok {
+		h.name = name	
+	} else {
+		return header{}, errors.New("ybegin header does not contain name field")
 	}
 	
 	return
