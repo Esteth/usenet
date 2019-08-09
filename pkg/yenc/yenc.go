@@ -113,7 +113,10 @@ func (z *Reader) Read(buf []byte) (n int, err error) {
 // If no header has been read, it returns an error.
 func (z *Reader) Filename() (string, error) {
 	if z.header.name == "" {
-		return "", errors.New("Cannot determine filename until ybegin header has been read")
+		z.Read(make([]byte, 0, 0))
+		if z.header.name == "" {
+			return "", errors.New("Cannot determine filename until ybegin header has been read")
+		}
 	}
 	return z.header.name, nil
 }

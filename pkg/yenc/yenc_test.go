@@ -103,3 +103,25 @@ func TestFilename(t *testing.T) {
 		t.Fatalf("Read filename '%s' not equal to expected filename 'testfile.txt'", filename)
 	}
 }
+
+
+func TestFilenameBeforeRead(t *testing.T) {
+	encodedFile, err := os.Open("testdata/encoded.txt")
+	defer encodedFile.Close()
+	if err != nil {
+		t.Fatalf("Could not open encoded data file: %v", err)
+	}
+
+	yencReader, err := NewReader(encodedFile)
+	if err != nil {
+		t.Fatalf("Could not initialize yenc Reader: %v", err)
+	}
+
+	filename, err :=  yencReader.Filename()
+	if err != nil {
+		t.Fatalf("Failed to read filename: %v", err)
+	}
+	if filename != "testfile.txt" {
+		t.Fatalf("Read filename '%s' not equal to expected filename 'testfile.txt'", filename)
+	}
+}
