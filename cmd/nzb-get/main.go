@@ -66,12 +66,19 @@ func main() {
 			return
 		}
 
-		file, err := os.Create(filename)
+		file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0666)
 		defer file.Close()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: Could not open output file: %v\n", err)
 			return
 		}
+
+		offset, err := yencReader.Offset()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: Could not read offset from file: %v\n", err)
+			return
+		}
+		file.Seek(offset, 0)
 
 		bytesWritten, err := io.Copy(file, yencReader)
 		if err != nil {
@@ -79,6 +86,6 @@ func main() {
 			return
 		}
 
-		fmt.Printf("Written %d bytes to %s", bytesWritten, filename)
+		fmt.Printf("Written %d bytes to %s\n", bytesWritten, filename)
 	}
 }

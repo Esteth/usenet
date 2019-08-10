@@ -16,7 +16,9 @@ import (
 
 type header struct {
 	lineLength int
+	multipart  bool
 	name       string
+	offset     int64
 	size 	   int64
 }
 
@@ -82,11 +84,25 @@ func (z *Reader) Read(buf []byte) (n int, err error) {
 		}
 		if !z.foundHeader {
 			// Ignore all text until we find the yEnc begin header
-			if strings.HasPrefix(z.s.Text(), "=ybegin") {
+			if strings.HasPrefix(z.s.Text(), "=ybegin ") {
 				z.foundHeader = true
 				z.header, err = parseBegin(z.s.Text())
 				if err != nil {
-					return n, errors.Wrap(err, "Failed to parse ybegin header")
+					return n, errors.Wrap(err, "failed to parse ybegin header")
+				}
+				if z.header.multipart {
+					scanSucceeded = z.s.Scan()
+					if !scanSucceeded {
+						if z.s.Err() != nil {
+							return n, z.s.Err()
+						} else {
+							return n, errors.New("found EOF while expecting ypart header")
+						}
+					}
+					if !strings.HasPrefix(z.s.Text(), "=ypart ") {
+						return n, errors.New("did not find ypart header where expected")
+					}
+					z.header.offset, z.header.size, err = parsePart(z.s.Text())
 				}
 			}
 		} else {
@@ -110,15 +126,41 @@ func (z *Reader) Read(buf []byte) (n int, err error) {
 
 // Filename returns the filename specified in the ybegin header.
 //
-// If no header has been read, it returns an error.
+// If no header has been read, it reads to the header.
 func (z *Reader) Filename() (string, error) {
 	if z.header.name == "" {
 		z.Read(make([]byte, 0, 0))
 		if z.header.name == "" {
-			return "", errors.New("Cannot determine filename until ybegin header has been read")
+			return "", errors.New("Cannot find header in document, or header specifies empty filename")
 		}
 	}
 	return z.header.name, nil
+}
+
+// Multipart returns true if the stream contains a multi-part yEnc message.
+//
+// If no header has been read, it reads to the header.
+func (z *Reader) Multipart() (bool, error) {
+	if z.header.name == "" {
+		z.Read(make([]byte, 0, 0))
+		if z.header.name == "" {
+			return false, errors.New("Cannot find header in document")
+		}
+	}
+	return z.header.multipart, nil
+}
+
+// Offset returns the index into the file the data described in this stream begins at.
+//
+// If no header has been read, it reads to the header.
+func (z *Reader) Offset() (int64, error) {
+	if z.header.name == "" {
+		z.Read(make([]byte, 0, 0))
+		if z.header.name == "" {
+			return 0, errors.New("Cannot find header in document")
+		}
+	}
+	return z.header.offset, nil
 }
 
 // readLine reads a single line of input data from intput into output.
@@ -184,6 +226,40 @@ func parseBegin(beginLine string) (h header, err error) {
 	} else {
 		return header{}, errors.New("ybegin header does not contain name field")
 	}
+
+	if _, ok := fields["part"]; ok {
+		h.multipart = true
+	}
+	
+	return
+}
+
+// parsePart parses a "=ypart" header line, returning the offset, size and an error
+func parsePart(beginLine string) (offset int64, size int64, err error) {
+	fields, err := parseHeader(beginLine)
+	if err != nil {
+		return 0, 0, errors.Wrapf(err, "Failed to parse ypart line: %v", beginLine)
+	}
+
+	if offsetString, ok := fields["begin"]; ok {
+		offset, err = strconv.ParseInt(offsetString, 10, 0)
+		if err != nil {
+			return 0, 0, errors.Wrapf(err, "could not convert 'begin' to int: %s", fields["begin"])
+		}
+		offset-- // NZB files use 1-indexed numbers
+	} else {
+		return 0, 0, errors.New("ypart header does not contain start field")
+	}
+
+	if endString, ok := fields["end"]; ok {
+		end, err := strconv.ParseInt(endString, 10, 0)
+		if err != nil {
+			return 0, 0, errors.Wrapf(err, "could not convert 'end' to int: %s", fields["end"])
+		}
+		size = end - offset
+	} else {
+		return 0, 0, errors.New("ypart header does not contain end field")
+	}
 	
 	return
 }
@@ -214,7 +290,10 @@ func (z *Reader) validateEnd(endLine string) error {
 			return errors.Wrap(err, "size validation failure: Could not parse size in footer")
 		}
 		if size != z.header.size {
-			return errors.New("header and foter do not agree on size. Could not validate")
+			return errors.Errorf(
+				"header (%d) and footer (%d) do not agree on size. Could not validate",
+				z.header.size,
+				size)
 		}
 	} else {
 		return errors.New("no size found in footer. Could not validate")

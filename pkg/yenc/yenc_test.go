@@ -35,7 +35,15 @@ func TestSinglePart(t *testing.T) {
 	}
 
 	if !bytes.Equal(decoded, expected) {
-		t.Fatalf("Read data %v not equal to expected data %v", decoded, expected)
+		t.Errorf("Read data %v not equal to expected data %v", decoded, expected)
+	}
+
+	multipart, err := yencReader.Multipart()
+	if err != nil {
+		t.Fatalf("Could not determine if file is multipart: %v", err)
+	}
+	if multipart {
+		t.Errorf("Incorrectly determined single-part file to be multi-part")
 	}
 }
 
@@ -123,5 +131,34 @@ func TestFilenameBeforeRead(t *testing.T) {
 	}
 	if filename != "testfile.txt" {
 		t.Fatalf("Read filename '%s' not equal to expected filename 'testfile.txt'", filename)
+	}
+}
+
+func TestMultipart(t *testing.T) {
+	encodedFile, err := os.Open("testdata/00000021.ntx")
+	defer encodedFile.Close()
+	if err != nil {
+		t.Fatalf("Could not open encoded data file: %v", err)
+	}
+
+	yencReader, err := NewReader(encodedFile)
+	if err != nil {
+		t.Fatalf("Could not initialize yenc Reader: %v", err)
+	}
+
+	multipart, err := yencReader.Multipart()
+	if err != nil {
+		t.Fatalf("Failed to read multipart information: %v", err)
+	}
+	if !multipart {
+		t.Error("Multipart information not detected")
+	}
+
+	offset, err := yencReader.Offset()
+	if err != nil {
+		t.Fatalf("Failed to read offset: %v", err)
+	}
+	if offset != 11250 {
+		t.Errorf("Offset expected to be 11250, was %d", offset)
 	}
 }
