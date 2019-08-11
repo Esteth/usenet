@@ -47,7 +47,7 @@ func FromFile(filename string) ([]File, error) {
 	for _, f := range nzb.Files {
 		wg.Add(1)
 		go func(f File) {
-			defer wg.Done() // defer ensures we call Done even if we panic
+			defer wg.Done()
 			sort.Slice(f.Segments, func(i, j int) bool {
 				return f.Segments[i].Number  < f.Segments[j].Number
 			})
