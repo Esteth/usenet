@@ -3,6 +3,7 @@ package nzb
 import (
 	"sort"
 	"os"
+	"sync"
 	"encoding/xml"
 
 	"github.com/pkg/errors"
@@ -10,7 +11,7 @@ import (
 )
 
 type nzb struct {
-	File File `xml:"file"`
+	Files []File `xml:"file"`
 }
 
 // A File is metadata regarding where to find data in usenet for a particular file
@@ -27,22 +28,31 @@ type Segment struct {
 }
 
 // FromFile creates a new File struct by reading an nzb file from disk
-func FromFile(filename string) (File, error) {
+func FromFile(filename string) ([]File, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return File{}, errors.Wrapf(err, "could not open '%s'", filename)
+		return nil, errors.Wrapf(err, "could not open '%s'", filename)
 	}
 	var nzb nzb
 	decoder := xml.NewDecoder(file)
 	decoder.CharsetReader = charset.NewReaderLabel
 	err = decoder.Decode(&nzb)
 	if err != nil {
-		return File{}, errors.Wrapf(err, "could not parse '%s' as NZB", filename)
+		return nil, errors.Wrapf(err, "could not parse '%s' as NZB", filename)
 	}
 
-	sort.Slice(nzb.File.Segments, func(i, j int) bool {
-		return nzb.File.Segments[i].Number  < nzb.File.Segments[j].Number
-	})
+	// Sort each file's segments into order
+	var wg sync.WaitGroup
+	for _, f := range nzb.Files {
+		wg.Add(1)
+		go func(f File) {
+			defer wg.Done() // defer ensures we call Done even if we panic
+			sort.Slice(f.Segments, func(i, j int) bool {
+				return f.Segments[i].Number  < f.Segments[j].Number
+			})
+		}(f)
+	}
+	wg.Wait()
 
-	return nzb.File, nil
+	return nzb.Files, nil
 }
