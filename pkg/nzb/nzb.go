@@ -42,6 +42,7 @@ func FromFile(filename string) ([]File, error) {
 	}
 
 	// Sort each file's segments into order
+	// TODO: Consider whether this belongs here or in the consumer.
 	var wg sync.WaitGroup
 	for _, f := range nzb.Files {
 		wg.Add(1)

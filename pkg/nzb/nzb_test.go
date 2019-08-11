@@ -6,22 +6,26 @@ import (
 )
 
 func TestSubject(t *testing.T) {
-	f, err := FromFile("./testdata/test.nzb")
+	files, err := FromFile("./testdata/test.nzb")
 	if err != nil {
 		t.Fatalf("failed to create NZB from file: %v", err)
 	}
-	if f.Subject != "ezNZB-01-09-2013 Test.mp3 - \"test.mp3\" yEnc (1/10)" {
-		t.Errorf("expected subject not equal to actual subject '%s'", f.Subject)
+	if files[0].Subject != "ezNZB-01-09-2013 Test.mp3 - \"test.mp3\" yEnc (1/10)" {
+		t.Errorf("expected subject not equal to actual subject '%s'", files[0].Subject)
 	}
 }
 
 func TestSegments(t *testing.T) {
-	f, err := FromFile("./testdata/test.nzb")
+	files, err := FromFile("./testdata/test.nzb")
 	if err != nil {
 		t.Fatalf("failed to create NZB from file: %v", err)
 	}
-	ids := make([]string, len(f.Segments))
-	for i, s := range f.Segments {
+	segments := make([]Segment, 0)
+	for _, file := range files {
+		segments = append(segments, file.Segments...)
+	}
+	ids := make([]string, len(segments))
+	for i, s := range segments {
 		ids[i] = s.ID
 	}
 	if !reflect.DeepEqual(ids, []string {
