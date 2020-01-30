@@ -24,7 +24,7 @@ func TestConnect(t *testing.T) {
 		}
 	}()
 
-	_, err = Dial(":9108")
+	_, err = net.Dial("tcp", ":9108")
 	if err != nil {
 		t.Fatalf("failed to dial: %v", err)
 	}
