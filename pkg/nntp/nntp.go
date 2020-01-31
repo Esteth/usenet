@@ -25,7 +25,7 @@ func Dial(address string) (*Conn, error) {
 	_, _, err = conn.ReadCodeLine(20)
 	if err != nil {
 		conn.Close()
-		return nil, fmt.Errorf("Could not read 20 while establishing connection: %w", err)
+		return nil, fmt.Errorf("Could not read 20X while establishing connection: %w", err)
 	}
 
 	return conn, nil
@@ -43,7 +43,7 @@ func DialTLS(address string) (*Conn, error) {
 	_, _, err = conn.ReadCodeLine(20)
 	if err != nil {
 		conn.Close()
-		return nil, fmt.Errorf("Could not read 20: %w", err)
+		return nil, fmt.Errorf("Could not read 20X while establshing TLS connection: %w", err)
 	}
 
 	return conn, nil

@@ -1,9 +1,11 @@
 package nntp
 
 import (
+	"bufio"
 	"net"
 	"fmt"
 	"testing"
+	"net/textproto"
 )
 
 func TestConnect(t *testing.T) {
@@ -21,17 +23,23 @@ func TestConnect(t *testing.T) {
 		for {
 			conn, err := server.Accept()
 			if err != nil {
-				t.Fatalf("failed to accept connection: %v", err)
+				return
 			}
 			go func(c net.Conn) {
-				c.Write([]byte(" 20 \r\n"))
+				writer := textproto.NewWriter(bufio.NewWriter(c))
+				writer.PrintfLine("%d ", 201)
 				c.Close()
 			}(conn)
 		}
 	}()
 
-	_, err = net.Dial("tcp", fmt.Sprintf(":%d", port))
+	conn, err := Dial(fmt.Sprintf(":%d", port))
 	if err != nil {
 		t.Fatalf("failed to dial: %v", err)
+	}
+
+	_, err = conn.ReadMessage("testMessage")
+	if err != nil {
+		t.Fatalf("failed to read message: %v", err)
 	}
 }
