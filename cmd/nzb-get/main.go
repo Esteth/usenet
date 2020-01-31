@@ -28,7 +28,7 @@ func main() {
 		return
 	}
 
-	nzbFiles, err := nzb.FromFile(*nzbPath)
+	nzb, err := nzb.FromFile(*nzbPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not parse nzb file: %v\n", err)
 		return
@@ -48,7 +48,7 @@ func main() {
 		}
 	}
 
-	for _, f := range nzbFiles {
+	for _, f := range nzb.Files {
 		for _, s := range f.Segments {
 			reader, err := conn.ReadMessage(s.ID)
 			if err != nil {
