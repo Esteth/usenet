@@ -6,22 +6,22 @@ import (
 )
 
 func TestSubject(t *testing.T) {
-	files, err := FromFile("./testdata/test.nzb")
+	nzb, err := FromFile("./testdata/test.nzb")
 	if err != nil {
 		t.Fatalf("failed to create NZB from file: %v", err)
 	}
-	if files[0].Subject != "ezNZB-01-09-2013 Test.mp3 - \"test.mp3\" yEnc (1/10)" {
-		t.Errorf("expected subject not equal to actual subject '%s'", files[0].Subject)
+	if nzb.Files[0].Subject != "ezNZB-01-09-2013 Test.mp3 - \"test.mp3\" yEnc (1/10)" {
+		t.Errorf("expected subject not equal to actual subject '%s'", nzb.Files[0].Subject)
 	}
 }
 
 func TestSegments(t *testing.T) {
-	files, err := FromFile("./testdata/test.nzb")
+	nzb, err := FromFile("./testdata/test.nzb")
 	if err != nil {
 		t.Fatalf("failed to create NZB from file: %v", err)
 	}
 	segments := make([]Segment, 0)
-	for _, file := range files {
+	for _, file := range nzb.Files {
 		segments = append(segments, file.Segments...)
 	}
 	ids := make([]string, len(segments))

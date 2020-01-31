@@ -1,16 +1,16 @@
 package nzb
 
 import (
-	"sort"
-	"os"
-	"sync"
 	"encoding/xml"
+	"os"
+	"sort"
+	"sync"
 
 	"github.com/pkg/errors"
 	"golang.org/x/net/html/charset"
 )
 
-type nzb struct {
+type Nzb struct {
 	Files []File `xml:"file"`
 }
 
@@ -27,18 +27,18 @@ type Segment struct {
 	ID     string `xml:",innerxml"`
 }
 
-// FromFile creates a new File struct by reading an nzb file from disk
-func FromFile(filename string) ([]File, error) {
+// FromFile creates a new Nzb struct by reading an nzb file from disk
+func FromFile(filename string) (Nzb, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not open '%s'", filename)
+		return Nzb{}, errors.Wrapf(err, "could not open '%s'", filename)
 	}
-	var nzb nzb
+	var nzb Nzb
 	decoder := xml.NewDecoder(file)
 	decoder.CharsetReader = charset.NewReaderLabel
 	err = decoder.Decode(&nzb)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not parse '%s' as NZB", filename)
+		return Nzb{}, errors.Wrapf(err, "could not parse '%s' as NZB", filename)
 	}
 
 	// Sort each file's segments into order
@@ -49,11 +49,11 @@ func FromFile(filename string) ([]File, error) {
 		go func(f File) {
 			defer wg.Done()
 			sort.Slice(f.Segments, func(i, j int) bool {
-				return f.Segments[i].Number  < f.Segments[j].Number
+				return f.Segments[i].Number < f.Segments[j].Number
 			})
 		}(f)
 	}
 	wg.Wait()
 
-	return nzb.Files, nil
+	return nzb, nil
 }
