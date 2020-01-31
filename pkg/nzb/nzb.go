@@ -10,6 +10,7 @@ import (
 	"golang.org/x/net/html/charset"
 )
 
+// An Nzb represents the contents of an NZB file. 
 type Nzb struct {
 	Files []File `xml:"file"`
 }
