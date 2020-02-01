@@ -78,7 +78,11 @@ func (conn *Conn) Authenticate(user string, pass string) error {
 	conn.StartResponse(id)
 	code, _, err = conn.ReadCodeLine(281)
 	conn.EndResponse(id)
-	return fmt.Errorf("Failed reading 281 while authenticating: %w", err)
+	if err != nil {
+		return fmt.Errorf("Failed reading 281 while authenticating: %w", err)
+	}
+
+	return nil
 }
 
 // ReadMessage will return a Reader onto the body of a message
