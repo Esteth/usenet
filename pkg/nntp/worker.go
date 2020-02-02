@@ -1,10 +1,7 @@
 package nntp
 
 import "fmt"
-import "io"
 import "os"
-
-import "github.com/esteth/usenet/pkg/yenc"
 
 type Worker struct {
 	Address     string
@@ -30,44 +27,12 @@ func (w *Worker) Work() {
 	}
 
 	for messageID := range w.Requests {
-		reader, err := conn.ReadMessage(messageID)
+		bytesWritten, err := conn.ReadMessageToFile(messageID)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-			return
-		}
-		yencReader, err := yenc.NewReader(reader)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: Could not create reader: %v\n", err)
-			return
+			fmt.Fprintf(os.Stderr, "Failed to read message to file: %v\n", err)
 		}
 
-		filename, err := yencReader.Filename()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: Could not get filename: %v\n", err)
-			return
-		}
-
-		file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0666)
-		defer file.Close()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: Could not open output file: %v\n", err)
-			return
-		}
-
-		offset, err := yencReader.Offset()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: Could not read offset from file: %v\n", err)
-			return
-		}
-		file.Seek(offset, 0)
-
-		bytesWritten, err := io.Copy(file, yencReader)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: Could not copy data to file: %v\n", err)
-			return
-		}
-
-		fmt.Printf("Written %d bytes to %s\n", bytesWritten, filename)
+		fmt.Printf("Written %d bytes\n", bytesWritten)
 		w.Completions <- true
 	}
 }

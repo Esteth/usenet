@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/textproto"
+	"os"
+
+	"github.com/esteth/usenet/pkg/yenc"
 )
 
 // Conn represents an NNTP connection
@@ -99,4 +102,41 @@ func (conn *Conn) ReadMessage(messageID string) (io.Reader, error) {
 		return nil, fmt.Errorf("Could not read 222: %w", err)
 	}
 	return conn.DotReader(), nil
+}
+
+// ReadMessageToFile downloads and writes the appropriate segment of the file the message represents.
+// Returns the number of bytes written to the file, or an error.
+func (conn *Conn) ReadMessageToFile(messageID string) (int64, error) {
+	reader, err := conn.ReadMessage(messageID)
+	if err != nil {
+		return 0, fmt.Errorf("Could not read message: %w", err)
+	}
+	yencReader, err := yenc.NewReader(reader)
+	if err != nil {
+		return 0, fmt.Errorf("Could not create reader: %w", err)
+	}
+
+	filename, err := yencReader.Filename()
+	if err != nil {
+		return 0, fmt.Errorf("Could not get filename: %w", err)
+	}
+
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0666)
+	defer file.Close()
+	if err != nil {
+		return 0, fmt.Errorf("Could not open output file: %w", err)
+	}
+
+	offset, err := yencReader.Offset()
+	if err != nil {
+		return 0, fmt.Errorf("Could not read offset from file: %w", err)
+	}
+	file.Seek(offset, 0)
+
+	bytesWritten, err := io.Copy(file, yencReader)
+	if err != nil {
+		return 0, fmt.Errorf("Could not copy data to file: %w", err)
+	}
+
+	return bytesWritten, nil
 }
