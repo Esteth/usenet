@@ -43,14 +43,7 @@ func main() {
 	messageIds := make(chan string, len(segments))
 	completions := make(chan bool, len(segments))
 	for c := 0; c < *maxConnections; c++ {
-		worker := nntp.Worker{
-			Address: *address,
-			User: *user,
-			Password: *password,
-			Requests: messageIds,
-			Completions: completions,
-		}
-		go worker.Work()
+		go worker(*address, *user, *password, messageIds, completions)
 	}
 	for _, segment := range segments {
 		messageIds <- segment
@@ -58,5 +51,31 @@ func main() {
 	close(messageIds)
 	for i := 0; i < len(segments); i++ {
 		<-completions
+	}
+}
+
+func worker(address string, user string, password string, requests <-chan string, completions chan<- bool) {
+	conn, err := nntp.DialTLS(address)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		return
+	}
+
+	if user != "" && password != "" {
+		err = conn.Authenticate(user, password)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to Authenticate: %v\n", err)
+			return
+		}
+	}
+
+	for messageID := range requests {
+		bytesWritten, err := conn.ReadMessageToFile(messageID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to read message to file: %v\n", err)
+		}
+
+		fmt.Printf("Written %d bytes\n", bytesWritten)
+		completions <- true
 	}
 }
