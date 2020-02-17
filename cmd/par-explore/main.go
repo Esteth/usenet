@@ -49,6 +49,11 @@ func main() {
 				fmt.Printf("Slice checksum: %v\n", checksum)
 			}
 		}
+
+		if recoverySlicePacket, ok := packet.(par2.RecoverySlicePacket); ok {
+			fmt.Printf("Exponent: %d\n", recoverySlicePacket.Exponent)
+			fmt.Printf("Data: %v\n", recoverySlicePacket.Data)
+		}
 	}
 
 	if parScanner.Err() != nil {

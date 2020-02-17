@@ -95,7 +95,7 @@ func (p FileSliceChecksumPacket) Type() []byte {
 	return []byte(fileSliceChecksumPacketType)
 }
 
-// NewFileSliceChecksumPacket creates and initializes a new NewFileSliceChecksumPacket struct from the
+// NewFileSliceChecksumPacket creates and initializes a new FileSliceChecksumPacket struct from the
 // given binary packet data.
 func NewFileSliceChecksumPacket(data []byte) (FileSliceChecksumPacket, error) {
 	typ := string(data[48:64])
@@ -110,11 +110,40 @@ func NewFileSliceChecksumPacket(data []byte) (FileSliceChecksumPacket, error) {
 	numSlices := (binary.LittleEndian.Uint64(data[8:16]) - 16 - 64) / 20
 	packet.SliceHashes = make([][16]byte, numSlices)
 	packet.SliceCRC32s = make([][4]byte, numSlices)
-	
+
 	for i := uint64(0); i < numSlices; i++ {
 		copy(packet.SliceHashes[i][:], packetData[16 + i * 20: 32 + i * 20])
 		copy(packet.SliceCRC32s[i][:], packetData[32 + i * 20: 36 + i * 20])
 	}
+
+	return packet, nil
+}
+
+const recoverySlicePacketType = "PAR 2.0\000RecvSlic"
+
+// RecoverySlicePacket represents a Par 2.0 Recovery Slice packet.
+type RecoverySlicePacket struct {
+	Exponent uint32
+	Data []byte
+}
+
+// Type implements interface Packet to return the type of the Par 2.0 Recovery Slice Packet.
+func (p RecoverySlicePacket) Type() []byte {
+	return []byte(recoverySlicePacketType)
+}
+
+// NewRecoverySlicePacket creates and initializes a new RecoverySlicePacket struct from the
+// given binary packet data.
+func NewRecoverySlicePacket(data []byte) (RecoverySlicePacket, error) {
+	typ := string(data[48:64])
+	if typ != recoverySlicePacketType {
+		return RecoverySlicePacket{}, fmt.Errorf("Recovery Slice packet type not as expected. Was %s", typ)
+	}
+	packetData := data[64:]
+
+	packet := RecoverySlicePacket{}
+	packet.Exponent = binary.LittleEndian.Uint32(packetData[0:4])
+	copy(packet.Data[:], packetData[4:])
 
 	return packet, nil
 }
