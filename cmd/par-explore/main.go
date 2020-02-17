@@ -25,7 +25,12 @@ func main() {
 	
 	parScanner := par2.NewScanner(parFile)
 	for parScanner.Scan() {
-		fmt.Printf("packet found. Type: %v\n", string(parScanner.Packet().Type))
+		packet := parScanner.Packet()
+		fmt.Printf("packet found: %v\n", string(packet.Type()))
+
+		if mainPacket, ok := packet.(par2.MainPacket); ok {
+			fmt.Printf("Recovery file IDs: %v\n", mainPacket.RecoveryFileIDs)
+		}
 	}
 
 	if parScanner.Err() != nil {
