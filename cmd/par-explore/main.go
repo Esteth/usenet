@@ -31,6 +31,14 @@ func main() {
 		if mainPacket, ok := packet.(par2.MainPacket); ok {
 			fmt.Printf("Recovery file IDs: %v\n", mainPacket.RecoveryFileIDs)
 		}
+
+		if fileDescriptionPacket, ok := packet.(par2.FileDescriptionPacket); ok {
+			fmt.Printf("File Name: %s\n", fileDescriptionPacket.Name)
+			fmt.Printf("File ID: %v\n", fileDescriptionPacket.ID)
+			fmt.Printf("File MD5: %v\n", fileDescriptionPacket.MD5)
+			fmt.Printf("File MD5-16: %v\n", fileDescriptionPacket.MD516)
+			fmt.Printf("File Length: %d\n", fileDescriptionPacket.Length)
+		}
 	}
 
 	if parScanner.Err() != nil {

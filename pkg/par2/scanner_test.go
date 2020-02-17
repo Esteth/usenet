@@ -17,7 +17,7 @@ func TestPacketCount(t *testing.T) {
 	for scanner.Scan() {
 		packetCount++
 	}
-	
+
 	if scanner.Err() != nil {
 		t.Fatalf("Could not read packet: %v", scanner.Err())
 	}
