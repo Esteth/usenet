@@ -61,6 +61,8 @@ func (z *Scanner) Scan() bool {
 			z.packet, z.err = NewMainPacket(z.scanner.Bytes())
 		} else if string(packetType) == fileDescriptionPacketType {
 			z.packet, z.err = NewFileDescriptionPacket(z.scanner.Bytes())
+		} else if string(packetType) == fileSliceChecksumPacketType {
+			z.packet, z.err = NewFileSliceChecksumPacket(z.scanner.Bytes())
 		} else {
 			z.packet = &unknownPacket{
 				typ: packetType,

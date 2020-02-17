@@ -39,6 +39,16 @@ func main() {
 			fmt.Printf("File MD5-16: %v\n", fileDescriptionPacket.MD516)
 			fmt.Printf("File Length: %d\n", fileDescriptionPacket.Length)
 		}
+
+		if fileSliceChecksumPacket, ok := packet.(par2.FileSliceChecksumPacket); ok {
+			fmt.Printf("File ID: %v\n", fileSliceChecksumPacket.FileID)
+			for _, hash := range fileSliceChecksumPacket.SliceHashes {
+				fmt.Printf("Slice hash: %v\n", hash)
+			}
+			for _, checksum := range fileSliceChecksumPacket.SliceCRC32s {
+				fmt.Printf("Slice checksum: %v\n", checksum)
+			}
+		}
 	}
 
 	if parScanner.Err() != nil {

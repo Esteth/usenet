@@ -80,3 +80,41 @@ func NewFileDescriptionPacket(data []byte) (FileDescriptionPacket, error) {
 
 	return packet, nil
 }
+
+const fileSliceChecksumPacketType = "PAR 2.0\000IFSC\000\000\000\000"
+
+// FileSliceChecksumPacket represents a Par 2.0 File Slice Checksum Packet.
+type FileSliceChecksumPacket struct {
+	FileID [16]byte
+	SliceHashes [][16]byte
+	SliceCRC32s [][4]byte
+}
+
+// Type implements interface Packet to return the type of the Par 2.0 Input File Slice Checksum Packet.
+func (p FileSliceChecksumPacket) Type() []byte {
+	return []byte(fileSliceChecksumPacketType)
+}
+
+// NewFileSliceChecksumPacket creates and initializes a new NewFileSliceChecksumPacket struct from the
+// given binary packet data.
+func NewFileSliceChecksumPacket(data []byte) (FileSliceChecksumPacket, error) {
+	typ := string(data[48:64])
+	if typ != fileSliceChecksumPacketType {
+		return FileSliceChecksumPacket{}, fmt.Errorf("File Slice Checksum packet type not as expected. Was %s", typ)
+	}
+	packetData := data[64:]
+
+	packet := FileSliceChecksumPacket{}
+	copy(packet.FileID[:], packetData[0:16])
+
+	numSlices := (binary.LittleEndian.Uint64(data[8:16]) - 16 - 64) / 20
+	packet.SliceHashes = make([][16]byte, numSlices)
+	packet.SliceCRC32s = make([][4]byte, numSlices)
+	
+	for i := uint64(0); i < numSlices; i++ {
+		copy(packet.SliceHashes[i][:], packetData[16 + i * 20: 32 + i * 20])
+		copy(packet.SliceCRC32s[i][:], packetData[32 + i * 20: 36 + i * 20])
+	}
+
+	return packet, nil
+}
