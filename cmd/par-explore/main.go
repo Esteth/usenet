@@ -54,6 +54,10 @@ func main() {
 			fmt.Printf("Exponent: %d\n", recoverySlicePacket.Exponent)
 			fmt.Printf("Data: %v\n", recoverySlicePacket.Data)
 		}
+
+		if creatorPacket, ok := packet.(par2.CreatorPacket); ok {
+			fmt.Printf("Creator: %s", creatorPacket.Creator)
+		}
 	}
 
 	if parScanner.Err() != nil {

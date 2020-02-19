@@ -147,3 +147,30 @@ func NewRecoverySlicePacket(data []byte) (RecoverySlicePacket, error) {
 
 	return packet, nil
 }
+
+const creatorPacketType = "PAR 2.0\000Creator\000"
+
+// CreatorPacket represents a Par 2.0 Creator packet.
+type CreatorPacket struct {
+	Creator string
+}
+
+// Type implements interface Packet to return the type of the Par 2.0 Recovery Slice Packet.
+func (p CreatorPacket) Type() []byte {
+	return []byte(creatorPacketType)
+}
+
+// NewCreatorPacket creates and initializes a new CreatorPacket struct from the
+// given binary packet data.
+func NewCreatorPacket(data []byte) (CreatorPacket, error) {
+	typ := string(data[48:64])
+	if typ != creatorPacketType {
+		return CreatorPacket{}, fmt.Errorf("Creator packet type not as expected. Was %s", typ)
+	}
+	packetData := data[64:]
+
+	packet := CreatorPacket{}
+	packet.Creator = strings.TrimRight(string(packetData[0:]), "\000")
+
+	return packet, nil
+}
