@@ -15,8 +15,8 @@ type MainPacket struct {
 }
 
 // Type implements interface Packet to return the type of the Par 2.0 Main Packet.
-func (p MainPacket) Type() []byte {
-	return []byte(mainPacketType)
+func (p MainPacket) Type() string {
+	return mainPacketType
 }
 
 // NewMainPacket creates and initializes a new MainPacket struct from the given binary packet data.
@@ -58,8 +58,8 @@ type FileDescriptionPacket struct {
 }
 
 // Type implements interface Packet to return the type of the Par 2.0 File Description Packet.
-func (p FileDescriptionPacket) Type() []byte {
-	return []byte(fileDescriptionPacketType)
+func (p FileDescriptionPacket) Type() string {
+	return fileDescriptionPacketType
 }
 
 // NewFileDescriptionPacket creates and initializes a new FileDescriptionPacket struct from the
@@ -91,8 +91,8 @@ type FileSliceChecksumPacket struct {
 }
 
 // Type implements interface Packet to return the type of the Par 2.0 Input File Slice Checksum Packet.
-func (p FileSliceChecksumPacket) Type() []byte {
-	return []byte(fileSliceChecksumPacketType)
+func (p FileSliceChecksumPacket) Type() string {
+	return fileSliceChecksumPacketType
 }
 
 // NewFileSliceChecksumPacket creates and initializes a new FileSliceChecksumPacket struct from the
@@ -128,8 +128,8 @@ type RecoverySlicePacket struct {
 }
 
 // Type implements interface Packet to return the type of the Par 2.0 Recovery Slice Packet.
-func (p RecoverySlicePacket) Type() []byte {
-	return []byte(recoverySlicePacketType)
+func (p RecoverySlicePacket) Type() string {
+	return recoverySlicePacketType
 }
 
 // NewRecoverySlicePacket creates and initializes a new RecoverySlicePacket struct from the
@@ -156,8 +156,8 @@ type CreatorPacket struct {
 }
 
 // Type implements interface Packet to return the type of the Par 2.0 Recovery Slice Packet.
-func (p CreatorPacket) Type() []byte {
-	return []byte(creatorPacketType)
+func (p CreatorPacket) Type() string {
+	return creatorPacketType
 }
 
 // NewCreatorPacket creates and initializes a new CreatorPacket struct from the

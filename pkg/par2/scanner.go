@@ -11,14 +11,14 @@ import (
 var magicSequence = []byte{'P', 'A', 'R', '2', '\000', 'P', 'K', 'T'}
 
 type Packet interface {
-	Type() []byte
+	Type() string
 }
 
 type unknownPacket struct {
-	typ []byte
+	typ string
 }
 
-func (p *unknownPacket) Type() []byte {
+func (p *unknownPacket) Type() string {
 	return p.typ
 }
 
@@ -69,7 +69,7 @@ func (z *Scanner) Scan() bool {
 			z.packet, z.err = NewCreatorPacket(z.scanner.Bytes())
 		} else {
 			z.packet = &unknownPacket{
-				typ: packetType,
+				typ: string(packetType),
 			}
 		}
 		if z.scanner.Err() != nil && z.scanner.Err() != io.EOF {
