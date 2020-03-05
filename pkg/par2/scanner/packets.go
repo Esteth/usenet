@@ -1,4 +1,4 @@
-package par2
+package scanner
 
 import (
 	"encoding/binary"
@@ -85,7 +85,7 @@ const fileSliceChecksumPacketType = "PAR 2.0\000IFSC\000\000\000\000"
 
 // FileSliceChecksumPacket represents a Par 2.0 File Slice Checksum Packet.
 type FileSliceChecksumPacket struct {
-	FileID [16]byte
+	FileID      [16]byte
 	SliceHashes [][16]byte
 	SliceCRC32s [][4]byte
 }
@@ -112,8 +112,8 @@ func NewFileSliceChecksumPacket(data []byte) (FileSliceChecksumPacket, error) {
 	packet.SliceCRC32s = make([][4]byte, numSlices)
 
 	for i := uint64(0); i < numSlices; i++ {
-		copy(packet.SliceHashes[i][:], packetData[16 + i * 20: 32 + i * 20])
-		copy(packet.SliceCRC32s[i][:], packetData[32 + i * 20: 36 + i * 20])
+		copy(packet.SliceHashes[i][:], packetData[16+i*20:32+i*20])
+		copy(packet.SliceCRC32s[i][:], packetData[32+i*20:36+i*20])
 	}
 
 	return packet, nil
@@ -124,7 +124,7 @@ const recoverySlicePacketType = "PAR 2.0\000RecvSlic"
 // RecoverySlicePacket represents a Par 2.0 Recovery Slice packet.
 type RecoverySlicePacket struct {
 	Exponent uint32
-	Data []byte
+	Data     []byte
 }
 
 // Type implements interface Packet to return the type of the Par 2.0 Recovery Slice Packet.

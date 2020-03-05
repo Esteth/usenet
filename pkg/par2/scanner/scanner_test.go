@@ -1,4 +1,4 @@
-package par2
+package scanner
 
 import (
 	"os"
