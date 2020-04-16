@@ -10,6 +10,7 @@ const mainPacketType = "PAR 2.0\000Main\000\000\000\000"
 
 // MainPacket represents a Par 2.0 Main Packet.
 type MainPacket struct {
+	SliceSize          uint64
 	RecoveryFileIDs    [][16]byte
 	NonRecoveryFileIDs [][16]byte
 }
@@ -27,6 +28,8 @@ func NewMainPacket(data []byte) (MainPacket, error) {
 	}
 	mainPacketData := data[64:]
 
+	sliceSize := binary.LittleEndian.Uint64(mainPacketData[:8])
+
 	numRecoveryFiles := binary.LittleEndian.Uint32(mainPacketData[8:12])
 	recoveryFileIDs := make([][16]byte, numRecoveryFiles)
 	for i := uint32(0); i < numRecoveryFiles; i++ {
@@ -41,6 +44,7 @@ func NewMainPacket(data []byte) (MainPacket, error) {
 	}
 
 	return MainPacket{
+		SliceSize:          sliceSize,
 		RecoveryFileIDs:    recoveryFileIDs,
 		NonRecoveryFileIDs: nonRecoveryFileIDs,
 	}, nil
