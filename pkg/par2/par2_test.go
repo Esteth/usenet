@@ -12,7 +12,7 @@ func TestValidateValidArchive(t *testing.T) {
 		t.Fatalf("Could not open encoded par2 file: %v", err)
 	}
 
-	archive, err := FromFiles(f)
+	archive, err := FromFiles("testdata", f)
 	if err != nil {
 		t.Fatalf("Could not create Archive from file: %v", err)
 	}
@@ -23,19 +23,19 @@ func TestValidateValidArchive(t *testing.T) {
 }
 
 func TestValidateBrokenFiles(t *testing.T) {
-	f, err := os.Open("testdata/sample.mp4.brokenpar2")
+	f, err := os.Open("testdata/sample.broken.mp4.par2")
 	defer f.Close()
 	if err != nil {
 		t.Fatalf("Could not open encoded par2 file: %v", err)
 	}
 
-	archive, err := FromFiles(f)
+	archive, err := FromFiles("testdata", f)
 	if err != nil {
 		t.Fatalf("Could not create Archive from file: %v", err)
 	}
 
 	if err = archive.Validate(); err == nil {
-		t.Fatalf("Broken archive unexpectedly validated: %v", err)
+		t.Fatalf("Broken archive unexpectedly validated.")
 	}
 }
 
@@ -46,7 +46,7 @@ func TestRepairValidArchive(t *testing.T) {
 		t.Fatalf("Could not open encoded par2 file: %v", err)
 	}
 
-	archive, err := FromFiles(f)
+	archive, err := FromFiles("testdata", f)
 	if err != nil {
 		t.Fatalf("Could not create Archive from file: %v", err)
 	}

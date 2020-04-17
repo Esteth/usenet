@@ -3,6 +3,7 @@ package par2
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/esteth/usenet/pkg/par2/scanner"
 )
@@ -11,6 +12,8 @@ import (
 //
 // PAR 2.0 archives may be split across multiple files.
 type Archive struct {
+	// baseDirectory is the absolute path to the directory containing the recovery set.
+	baseDirectory string
 	// parFiles is the set of all PAR 2.0 files contained in the archive.
 	// Notably, it does not include the "recovery set", only the par2 files themselves.
 	parFiles []*os.File
@@ -51,13 +54,13 @@ func (rf *recoveryFile) populateChecksums(fsc scanner.FileSliceChecksumPacket) {
 // Validate verifies the checksums of the recovery set files, returning nil iff all files are undamaged.
 func (a *Archive) Validate() error {
 	for _, id := range a.recoveryFileIDs {
-		rf, exists := a.recoverySet[id]
+		recoveryFile, exists := a.recoverySet[id]
 		if !exists {
 			return fmt.Errorf("Could not find checksum data for file ID %v", id)
 		}
-		_, err := os.Open(rf.Name)
+		_, err := os.Open(filepath.Join(a.baseDirectory, recoveryFile.Name))
 		if err != nil {
-			return fmt.Errorf("Could not find expected file to validate at %s", rf.Name)
+			return fmt.Errorf("Could not find expected file to validate at %s", recoveryFile.Name)
 		}
 	}
 	return nil
@@ -71,7 +74,11 @@ func (a *Archive) Repair() error {
 }
 
 // FromFiles creates a new Archive struct by reading PAR 2.0 files from disk.
-func FromFiles(fs ...*os.File) (Archive, error) {
+func FromFiles(baseDirectory string, fs ...*os.File) (Archive, error) {
+	baseDirectory, err := filepath.Abs(baseDirectory)
+	if err != nil {
+		return Archive{}, fmt.Errorf("Could not convert base directory %s to absolute path: %w", baseDirectory, err)
+	}
 	var sliceSize uint64 = 0
 	recoveryFileIDs := make([][16]byte, 0)
 	recoverySet := make(map[[16]byte]*recoveryFile)
@@ -101,6 +108,7 @@ func FromFiles(fs ...*os.File) (Archive, error) {
 		}
 	}
 	return Archive{
+		baseDirectory:   baseDirectory,
 		parFiles:        fs,
 		sliceSize:       sliceSize,
 		recoveryFileIDs: recoveryFileIDs,
