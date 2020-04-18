@@ -1,7 +1,9 @@
 package par2
 
 import (
+	"crypto/md5"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -58,9 +60,31 @@ func (a *Archive) Validate() error {
 		if !exists {
 			return fmt.Errorf("Could not find checksum data for file ID %v", id)
 		}
-		_, err := os.Open(filepath.Join(a.baseDirectory, recoveryFile.Name))
+		f, err := os.Open(filepath.Join(a.baseDirectory, recoveryFile.Name))
 		if err != nil {
 			return fmt.Errorf("Could not find expected file to validate at %s", recoveryFile.Name)
+		}
+		defer f.Close()
+
+		buf := make([]byte, a.sliceSize)
+		for i, expectedChecksum := range recoveryFile.SliceMD5s {
+			bytesRead, err := f.Read(buf)
+			if err != nil {
+				if err == io.EOF {
+					break
+				} else {
+					return fmt.Errorf("Could not read from recovery file %s: %w", recoveryFile.Name, err)
+				}
+			}
+			// The specification says that "empty" bytes should be zeroed.
+			for i := uint64(bytesRead); i < a.sliceSize; i++ {
+				buf[i] = 0
+			}
+
+			actualChecksum := md5.Sum(buf)
+			if actualChecksum != expectedChecksum {
+				return fmt.Errorf("Checksum failed for file %s in slice %d", recoveryFile.Name, i)
+			}
 		}
 	}
 	return nil
