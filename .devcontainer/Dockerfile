@@ -34,7 +34,6 @@ RUN GO111MODULE=on go get -v \
         github.com/sqs/goreturns \
         github.com/josharian/impl \
         github.com/davidrjenni/reftools/cmd/fillstruct \
-        github.com/uudashr/gopkgs/cmd/gopkgs \
         github.com/ramya-rao-a/go-outline  \
         github.com/acroca/go-symbols  \
         github.com/godoctor/godoctor \
