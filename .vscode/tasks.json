@@ -1,0 +1,78 @@
+{
+	"version": "2.0.0",
+	"command": "go",
+    "echoCommand": true,
+    "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": true
+    },
+	"options": {
+		"cwd": "${workspaceRoot}",
+		"env": {
+            "GOPATH": "${workspaceRoot}/../.."
+        }
+	},
+	"tasks": [
+        {
+            "label": "run",
+            "args": [
+                "run",
+                "${workspaceRoot}/main.go"
+            ],
+            "type": "shell"
+        },
+        {
+            "label": "build",
+            "args": [
+                "build",
+                "-v",
+                "./..."
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "type": "shell",
+            "problemMatcher": [
+                "$go"
+            ]
+        },
+        {
+            "label": "test",
+            "args": [
+                "test",
+                "-v",
+                "./..."
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "type": "shell",
+        },
+        {
+            "label": "integration_tests",
+            "args": [
+                "test",
+                "-v",
+                "./...",
+                "-tags=integration"
+            ],
+            "type": "shell"
+        },
+        {
+            "label": "benchmark",
+            "args": [
+                "test",
+                "-bench=.",
+                "-v",
+                "./..."
+            ],
+            "type": "shell"
+        }
+    ]
+}
