@@ -1,7 +1,7 @@
 package gf
 
-//go:generate go run gf_gen.go
-//go:generate gofmt -w gf.go
+//go:generate go run tables_gen.go
+//go:generate gofmt -w tables.go
 
 const NW uint32 = 1 << 16
 
