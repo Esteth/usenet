@@ -7,6 +7,7 @@ import (
 	"github.com/esteth/usenet/pkg/par2/gf"
 )
 
+// Matrix type heavily inspired by github.com/klauspost/reedsolomon
 type matrix [][]uint16
 
 var errInvalidRowSize = errors.New("invalid row size")
@@ -98,6 +99,8 @@ func (m matrix) GaussianElimination() error {
 	rows := len(m)
 	cols := len(m[0])
 	for r := 0; r < rows; r++ {
+		// We can't work with rows which have 0 on our diagonal slot.
+		// Find a row below and swap with it.
 		if m[r][r] == 0 {
 			for rowBelow := r + 1; rowBelow < rows; rowBelow++ {
 				if m[rowBelow][r] != 0 {
@@ -109,15 +112,19 @@ func (m matrix) GaussianElimination() error {
 				}
 			}
 		}
+		// If we had to swap but we couldn't, then the matrix is singular.
 		if m[r][r] == 0 {
 			return errSingular
 		}
+		// Scale the row to have a 1 in the diagonal.
 		if m[r][r] != 1 {
 			scale := gf.Div(1, m[r][r])
 			for c := 0; c < cols; c++ {
 				m[r][c] = gf.Mul(m[r][c], scale)
 			}
 		}
+		// Every row below must have a zero in this column, so subtract
+		// multiples of this row.
 		for rowBelow := r + 1; rowBelow < rows; rowBelow++ {
 			if m[rowBelow][r] != 0 {
 				scale := m[rowBelow][r]
@@ -127,6 +134,7 @@ func (m matrix) GaussianElimination() error {
 			}
 		}
 	}
+	// Clear out everything above the diagonal.
 	for d := 0; d < rows; d++ {
 		for rowAbove := 0; rowAbove < d; rowAbove++ {
 			if m[rowAbove][d] != 0 {

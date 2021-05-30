@@ -70,7 +70,7 @@ func TestMultiply(t *testing.T) {
 func TestGaussianEliminationSimple(t *testing.T) {
 	m, err := newMatrixData(
 		[][]uint16{
-			{1, 2, 3, 1},
+			{4, 2, 3, 1},
 			{2, 3, 5, 0},
 			{3, 4, 5, 0},
 		},
@@ -85,9 +85,9 @@ func TestGaussianEliminationSimple(t *testing.T) {
 
 	expected, err := newMatrixData(
 		[][]uint16{
-			{1, 0, 0, 1},
-			{0, 1, 0, 1},
-			{0, 0, 1, 1},
+			{1, 0, 0, 43393},
+			{0, 1, 0, 14427},
+			{0, 0, 1, 21091},
 		},
 	)
 	if err != nil {
