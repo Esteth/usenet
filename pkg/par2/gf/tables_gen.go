@@ -18,7 +18,7 @@ func main() {
 
 	gflog := make([]uint16, size)
 	gfilog := make([]uint16, size)
-	for log := uint32(0); log < size-1; log++ {
+	for log := uint32(0); log < size; log++ {
 		gflog[b] = uint16(log)
 		gfilog[log] = uint16(b)
 		b = b << 1

@@ -61,3 +61,11 @@ func TestDivByZeroPanics(t *testing.T) {
 	}()
 	Div(11, 0)
 }
+
+func TestMulDivIdentity(t *testing.T) {
+	scale := Div(1, 3)
+	res := Mul(3, scale)
+	if res != 1 {
+		t.Fatalf("3 * (1 / 3) != 1. Actual: %d", res)
+	}
+}
