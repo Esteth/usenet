@@ -67,7 +67,7 @@ func TestMultiply(t *testing.T) {
 	}
 }
 
-func TestGaussianEliminationSimple(t *testing.T) {
+func TestGaussianElimination(t *testing.T) {
 	m, err := newMatrixData(
 		[][]uint16{
 			{4, 2, 3, 1},
