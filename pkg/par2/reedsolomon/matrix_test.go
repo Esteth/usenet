@@ -5,6 +5,28 @@ import (
 	"testing"
 )
 
+func TestVandermondeMatrix(t *testing.T) {
+	m, err := newVandermondeMatrix(5, 6)
+	if err != nil {
+		t.Fatalf("failed to create Vandermonde matrix: %v", err)
+	}
+	expected, err := newMatrixData(
+		[][]uint16{
+			{1, 1, 1, 1, 1, 1},
+			{1, 2, 3, 4, 5, 6},
+			{1, 4, 5, 16, 17, 20},
+			{1, 8, 15, 64, 85, 120},
+			{1, 16, 17, 256, 257, 272},
+		},
+	)
+	if err != nil {
+		t.Fatalf("failed to create expected matrix: %v", err)
+	}
+	if !reflect.DeepEqual(m, expected) {
+		t.Fatalf("created vandermonde matrix not as expected: %v", m)
+	}
+}
+
 func TestMultiplyByIdentityMatrix(t *testing.T) {
 	m, err := newMatrixData(
 		[][]uint16{

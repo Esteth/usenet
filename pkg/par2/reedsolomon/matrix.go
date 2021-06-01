@@ -38,6 +38,27 @@ func newMatrixData(data [][]uint16) (matrix, error) {
 	return m, nil
 }
 
+func newVandermondeMatrix(rows, cols int) (matrix, error) {
+	m, err := newMatrix(rows, cols)
+	if err != nil {
+		return nil, err
+	}
+	for r, row := range m {
+		for c := range row {
+			if c == 0 || r == 0 {
+				m[r][c] = 1
+				continue
+			}
+			if r == 1 {
+				m[r][c] = uint16(c + 1)
+				continue
+			}
+			m[r][c] = gf.Mul(m[r-1][c], uint16(c+1))
+		}
+	}
+	return m, nil
+}
+
 func identityMatrix(size int) (matrix, error) {
 	m, err := newMatrix(size, size)
 	if err != nil {
