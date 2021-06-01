@@ -12,6 +12,7 @@ type matrix [][]uint16
 
 var errInvalidRowSize = errors.New("invalid row size")
 var errInvalidColSize = errors.New("invalid col size")
+var errRowSizeMismatch = errors.New("row size is not the same for both matrices")
 var errColSizeMismatch = errors.New("column size is not the same for all rows")
 var errSingular = errors.New("cannot solve a singular matrix")
 
@@ -167,4 +168,33 @@ func (m matrix) GaussianElimination() error {
 		}
 	}
 	return nil
+}
+
+func (m matrix) Augment(other matrix) (matrix, error) {
+	if len(m) != len(other) {
+		return nil, errRowSizeMismatch
+	}
+	newM := matrix(make([][]uint16, len(m)))
+	for r := range m {
+		newM[r] = make([]uint16, 0, len(m[0])+len(other[0]))
+		newM[r] = append(newM[r], m[r]...)
+		newM[r] = append(newM[r], other[r]...)
+	}
+	return newM, nil
+}
+
+func (m matrix) AugmentVertical(other matrix) (matrix, error) {
+	if len(m[0]) != len(other[0]) {
+		return nil, errColSizeMismatch
+	}
+	newM := matrix(make([][]uint16, 0, len(m)+len(other)))
+	for r := range m {
+		newM = append(newM, make([]uint16, len(m[r])))
+		copy(newM[r], m[r])
+	}
+	for r := range other {
+		newM = append(newM, make([]uint16, len(m[r])))
+		copy(newM[r+len(m)], other[r])
+	}
+	return newM, nil
 }
