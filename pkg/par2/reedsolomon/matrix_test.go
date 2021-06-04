@@ -242,23 +242,23 @@ func TestPlankPaperErrorRecovery(t *testing.T) {
 	checksums := []uint16{11, 69, 737}
 	i, err := identityMatrix(len(data))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("could not create identity matrix: %v", err)
 	}
 	f, err := newVandermondeMatrix(3, len(data))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("could not create vandermonde matrix: %v", err)
 	}
 	a, err := i.AugmentVertical(f)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("could not stack identity and vandermonde matrix: %v", err)
 	}
 	e, err := newMatrixColumn(append(data, checksums...))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("could not create column with data and checksums: %v", err)
 	}
 	solve, err := a.Augment(e)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("could not create problem matrix: %v", err)
 	}
 
 	// Delete some rows to pretend we lost some data
@@ -266,7 +266,7 @@ func TestPlankPaperErrorRecovery(t *testing.T) {
 
 	err = solve.GaussianElimination()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("could not solve problem matrix: %v", err)
 	}
 
 	recoveredData := make([]uint16, len(data))
