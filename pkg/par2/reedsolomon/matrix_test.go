@@ -236,3 +236,45 @@ func TestGaussianElimination(t *testing.T) {
 		t.Fatalf("Elimination did not provide correct results: %v", m)
 	}
 }
+
+func TestPlankPaperErrorRecovery(t *testing.T) {
+	data := []uint16{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+	checksums := []uint16{11, 69, 737}
+	i, err := identityMatrix(len(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := newVandermondeMatrix(3, len(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, err := i.AugmentVertical(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e, err := newMatrixColumn(append(data, checksums...))
+	if err != nil {
+		t.Fatal(err)
+	}
+	solve, err := a.Augment(e)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Delete some rows to pretend we lost some data
+	solve = append(solve[:4], solve[7:]...)
+
+	err = solve.GaussianElimination()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	recoveredData := make([]uint16, len(data))
+	for r, row := range solve {
+		recoveredData[r] = row[len(row)-1]
+	}
+
+	if !reflect.DeepEqual(recoveredData, data) {
+		t.Fatalf("recovered data %v not equal to expected data %v", recoveredData, data)
+	}
+}

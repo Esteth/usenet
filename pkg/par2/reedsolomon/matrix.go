@@ -39,6 +39,17 @@ func newMatrixData(data [][]uint16) (matrix, error) {
 	return m, nil
 }
 
+func newMatrixColumn(data []uint16) (matrix, error) {
+	if len(data) <= 0 {
+		return nil, errInvalidColSize
+	}
+	m := matrix(make([][]uint16, len(data)))
+	for i := range m {
+		m[i] = []uint16{data[i]}
+	}
+	return m, nil
+}
+
 func newVandermondeMatrix(rows, cols int) (matrix, error) {
 	m, err := newMatrix(rows, cols)
 	if err != nil {
