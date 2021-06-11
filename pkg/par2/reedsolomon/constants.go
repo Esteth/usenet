@@ -1,22 +1,22 @@
-package par2
+package reedsolomon
 
 import (
 	"github.com/esteth/usenet/pkg/par2/gf"
 )
 
-type ConstantPool struct {
+type constantPool struct {
 	currentPower int
 	currentValue uint16
 }
 
-func NewConstantPool() ConstantPool {
-	return ConstantPool{
+func newConstantPool() constantPool {
+	return constantPool{
 		currentPower: 0,
 		currentValue: 1,
 	}
 }
 
-func (p *ConstantPool) Next() uint16 {
+func (p *constantPool) Next() uint16 {
 	for {
 		p.currentValue = gf.Mul(p.currentValue, 2)
 		p.currentPower++

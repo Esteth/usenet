@@ -5,18 +5,18 @@ import (
 	"testing"
 )
 
-func TestVandermondeMatrix(t *testing.T) {
-	m, err := newVandermondeMatrix(5, 6)
+func TestVandermondePar2Matrix(t *testing.T) {
+	m, err := newVandermondePar2Matrix(5, 6)
 	if err != nil {
 		t.Fatalf("failed to create Vandermonde matrix: %v", err)
 	}
 	expected, err := newMatrixData(
 		[][]uint16{
 			{1, 1, 1, 1, 1, 1},
-			{1, 2, 3, 4, 5, 6},
-			{1, 4, 5, 16, 17, 20},
-			{1, 8, 15, 64, 85, 120},
-			{1, 16, 17, 256, 257, 272},
+			{1, 2, 4, 16, 128, 256},
+			{1, 4, 16, 256, 16384, 4107},
+			{1, 8, 64, 4096, 8566, 7099},
+			{1, 16, 256, 4107, 43963, 7166},
 		},
 	)
 	if err != nil {
@@ -239,12 +239,12 @@ func TestGaussianElimination(t *testing.T) {
 
 func TestPlankPaperErrorRecovery(t *testing.T) {
 	data := []uint16{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	checksums := []uint16{11, 69, 737}
+	checksums := []uint16{11, 60570, 57778}
 	i, err := identityMatrix(len(data))
 	if err != nil {
 		t.Fatalf("could not create identity matrix: %v", err)
 	}
-	f, err := newVandermondeMatrix(3, len(data))
+	f, err := newVandermondePar2Matrix(3, len(data))
 	if err != nil {
 		t.Fatalf("could not create vandermonde matrix: %v", err)
 	}

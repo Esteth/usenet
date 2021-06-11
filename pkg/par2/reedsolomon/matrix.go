@@ -50,11 +50,12 @@ func newMatrixColumn(data []uint16) (matrix, error) {
 	return m, nil
 }
 
-func newVandermondeMatrix(rows, cols int) (matrix, error) {
+func newVandermondePar2Matrix(rows, cols int) (matrix, error) {
 	m, err := newMatrix(rows, cols)
 	if err != nil {
 		return nil, err
 	}
+	var constantPool constantPool = newConstantPool()
 	for r, row := range m {
 		for c := range row {
 			if c == 0 || r == 0 {
@@ -62,10 +63,10 @@ func newVandermondeMatrix(rows, cols int) (matrix, error) {
 				continue
 			}
 			if r == 1 {
-				m[r][c] = uint16(c + 1)
+				m[r][c] = constantPool.Next()
 				continue
 			}
-			m[r][c] = gf.Mul(m[r-1][c], uint16(c+1))
+			m[r][c] = gf.Mul(m[r-1][c], m[1][c])
 		}
 	}
 	return m, nil

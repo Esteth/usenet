@@ -1,4 +1,4 @@
-package par2
+package reedsolomon
 
 import "testing"
 
@@ -16,7 +16,7 @@ func TestFirstFewConstants(t *testing.T) {
 		32856,
 		17132,
 	}
-	pool := NewConstantPool()
+	pool := newConstantPool()
 	for i, expected := range expected {
 		constant := pool.Next()
 		if constant != expected {
