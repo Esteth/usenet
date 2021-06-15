@@ -28,21 +28,21 @@ func TestMulByZero(t *testing.T) {
 func TestMulOverflow(t *testing.T) {
 	res := Mul(3, 3)
 	if res != 5 {
-		t.Fatalf("5487 * 39905 != 61347. Actual: %d", res)
+		t.Fatalf("3 * 3 != 5. Actual: %d", res)
 	}
 }
 
 func TestDiv(t *testing.T) {
 	res := Div(15, 7)
 	if res != 27500 {
-		t.Fatalf("11 / 7 != 4. Actual: %d", res)
+		t.Fatalf("15 / 7 != 27500. Actual: %d", res)
 	}
 }
 
 func TestBigDiv(t *testing.T) {
 	res := Div(5487, 39905)
 	if res != 29454 {
-		t.Fatalf("5487 * 39905 != 61347. Actual: %d", res)
+		t.Fatalf("5487 / 39905 != 29454. Actual: %d", res)
 	}
 }
 
