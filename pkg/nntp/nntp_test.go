@@ -2,10 +2,12 @@ package nntp
 
 import (
 	"bufio"
-	"net"
 	"fmt"
-	"testing"
+	"io"
+	"net"
 	"net/textproto"
+	"regexp"
+	"testing"
 )
 
 func TestConnect(t *testing.T) {
@@ -19,6 +21,11 @@ func TestConnect(t *testing.T) {
 		t.Fatalf("could not parse port: %v", err)
 	}
 	defer server.Close()
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatal(r)
+		}
+	}()
 	go func() {
 		for {
 			conn, err := server.Accept()
@@ -26,8 +33,27 @@ func TestConnect(t *testing.T) {
 				return
 			}
 			go func(c net.Conn) {
+				// Reply 201 on connection established.
+				// 201 is server ready, posting not allowed.
 				writer := textproto.NewWriter(bufio.NewWriter(c))
-				writer.PrintfLine("%d ", 201)
+				writer.PrintfLine("201 ")
+
+				reader := textproto.NewReader(bufio.NewReader(c))
+				cmd, err := reader.ReadLine()
+				if err != nil && err != io.EOF {
+					panic(fmt.Errorf("failed to read command: %w", err))
+				}
+
+				if !regexp.MustCompile("BODY <(.+?)>").MatchString(cmd) {
+					panic(fmt.Errorf("failed to read BODY command: %w", err))
+				}
+
+				// 222 is command expected, response follows.
+				writer.PrintfLine("222 ")
+				messageWriter := writer.DotWriter()
+				io.WriteString(messageWriter, "Sample message content.")
+				messageWriter.Close()
+
 				c.Close()
 			}(conn)
 		}
