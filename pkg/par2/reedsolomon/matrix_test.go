@@ -6,11 +6,11 @@ import (
 )
 
 func TestVandermondePar2Matrix(t *testing.T) {
-	m, err := newVandermondePar2Matrix(5, 6)
+	m, err := NewVandermondePar2Matrix(5, 6)
 	if err != nil {
 		t.Fatalf("failed to create Vandermonde matrix: %v", err)
 	}
-	expected, err := newMatrixData(
+	expected, err := NewMatrixData(
 		[][]uint16{
 			{1, 1, 1, 1, 1, 1},
 			{1, 2, 4, 16, 128, 256},
@@ -28,7 +28,7 @@ func TestVandermondePar2Matrix(t *testing.T) {
 }
 
 func TestMultiplyByIdentityMatrix(t *testing.T) {
-	m, err := newMatrixData(
+	m, err := NewMatrixData(
 		[][]uint16{
 			{1, 2, 3},
 			{2, 3, 5},
@@ -38,7 +38,7 @@ func TestMultiplyByIdentityMatrix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not create matrix: %v", err)
 	}
-	id, err := identityMatrix(3)
+	id, err := IdentityMatrix(3)
 	if err != nil {
 		t.Fatalf("could not create identity matrix: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestMultiplyByIdentityMatrix(t *testing.T) {
 }
 
 func TestMultiply(t *testing.T) {
-	m1, err := newMatrixData(
+	m1, err := NewMatrixData(
 		[][]uint16{
 			{1, 2, 3},
 			{5, 7, 8},
@@ -61,7 +61,7 @@ func TestMultiply(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not create matrix: %v", err)
 	}
-	m2, err := newMatrixData(
+	m2, err := NewMatrixData(
 		[][]uint16{
 			{2, 5},
 			{3, 6},
@@ -75,7 +75,7 @@ func TestMultiply(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not multiply: %v", err)
 	}
-	expected, err := newMatrixData(
+	expected, err := NewMatrixData(
 		[][]uint16{
 			{8, 0},
 			{35, 59},
@@ -90,7 +90,7 @@ func TestMultiply(t *testing.T) {
 }
 
 func TestAugment(t *testing.T) {
-	m1, err := newMatrixData(
+	m1, err := NewMatrixData(
 		[][]uint16{
 			{1, 2, 3},
 			{5, 7, 8},
@@ -99,7 +99,7 @@ func TestAugment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not create matrix: %v", err)
 	}
-	m2, err := newMatrixData(
+	m2, err := NewMatrixData(
 		[][]uint16{
 			{2, 5},
 			{3, 6},
@@ -112,7 +112,7 @@ func TestAugment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not multiply: %v", err)
 	}
-	expected, err := newMatrixData(
+	expected, err := NewMatrixData(
 		[][]uint16{
 			{1, 2, 3, 2, 5},
 			{5, 7, 8, 3, 6},
@@ -127,7 +127,7 @@ func TestAugment(t *testing.T) {
 }
 
 func TestAugmentVertical(t *testing.T) {
-	m1, err := newMatrixData(
+	m1, err := NewMatrixData(
 		[][]uint16{
 			{1, 2, 3},
 			{5, 7, 8},
@@ -136,7 +136,7 @@ func TestAugmentVertical(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not create matrix: %v", err)
 	}
-	m2, err := newMatrixData(
+	m2, err := NewMatrixData(
 		[][]uint16{
 			{2, 5, 1},
 			{3, 6, 0},
@@ -149,7 +149,7 @@ func TestAugmentVertical(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not multiply: %v", err)
 	}
-	expected, err := newMatrixData(
+	expected, err := NewMatrixData(
 		[][]uint16{
 			{1, 2, 3},
 			{5, 7, 8},
@@ -166,7 +166,7 @@ func TestAugmentVertical(t *testing.T) {
 }
 
 func TestAugmentVerticalCopies(t *testing.T) {
-	m1, err := newMatrixData(
+	m1, err := NewMatrixData(
 		[][]uint16{
 			{1, 2, 3},
 			{5, 7, 8},
@@ -175,7 +175,7 @@ func TestAugmentVerticalCopies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not create matrix: %v", err)
 	}
-	m2, err := newMatrixData(
+	m2, err := NewMatrixData(
 		[][]uint16{
 			{2, 5, 1},
 			{3, 6, 0},
@@ -188,7 +188,7 @@ func TestAugmentVerticalCopies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not multiply: %v", err)
 	}
-	expected, err := newMatrixData(
+	expected, err := NewMatrixData(
 		[][]uint16{
 			{1, 2, 3},
 			{5, 7, 8},
@@ -207,7 +207,7 @@ func TestAugmentVerticalCopies(t *testing.T) {
 }
 
 func TestGaussianElimination(t *testing.T) {
-	m, err := newMatrixData(
+	m, err := NewMatrixData(
 		[][]uint16{
 			{4, 2, 3, 1},
 			{2, 3, 5, 0},
@@ -222,7 +222,7 @@ func TestGaussianElimination(t *testing.T) {
 		t.Fatalf("gaussian elimination failed: %v", err)
 	}
 
-	expected, err := newMatrixData(
+	expected, err := NewMatrixData(
 		[][]uint16{
 			{1, 0, 0, 43393},
 			{0, 1, 0, 14427},
@@ -240,11 +240,11 @@ func TestGaussianElimination(t *testing.T) {
 func TestPlankPaperErrorRecovery(t *testing.T) {
 	data := []uint16{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	checksums := []uint16{11, 60570, 57778}
-	i, err := identityMatrix(len(data))
+	i, err := IdentityMatrix(len(data))
 	if err != nil {
 		t.Fatalf("could not create identity matrix: %v", err)
 	}
-	f, err := newVandermondePar2Matrix(3, len(data))
+	f, err := NewVandermondePar2Matrix(3, len(data))
 	if err != nil {
 		t.Fatalf("could not create vandermonde matrix: %v", err)
 	}
@@ -252,7 +252,7 @@ func TestPlankPaperErrorRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not stack identity and vandermonde matrix: %v", err)
 	}
-	e, err := newMatrixColumn(append(data, checksums...))
+	e, err := NewMatrixColumn(append(data, checksums...))
 	if err != nil {
 		t.Fatalf("could not create column with data and checksums: %v", err)
 	}

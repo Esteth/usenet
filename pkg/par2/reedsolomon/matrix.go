@@ -16,7 +16,8 @@ var errRowSizeMismatch = errors.New("row size is not the same for both matrices"
 var errColSizeMismatch = errors.New("column size is not the same for all rows")
 var errSingular = errors.New("cannot solve a singular matrix")
 
-func newMatrix(rows, cols int) (matrix, error) {
+// NewMatrix creates a new matrix of the given size filled with zeroes.
+func NewMatrix(rows, cols int) (matrix, error) {
 	if rows <= 0 {
 		return nil, errInvalidRowSize
 	}
@@ -30,7 +31,8 @@ func newMatrix(rows, cols int) (matrix, error) {
 	return m, nil
 }
 
-func newMatrixData(data [][]uint16) (matrix, error) {
+// NewMatrix creates a new matrix backed by the given slice.
+func NewMatrixData(data [][]uint16) (matrix, error) {
 	m := matrix(data)
 	err := m.Check()
 	if err != nil {
@@ -39,7 +41,9 @@ func newMatrixData(data [][]uint16) (matrix, error) {
 	return m, nil
 }
 
-func newMatrixColumn(data []uint16) (matrix, error) {
+// NewMatrixColumn creates a new single-column matrix with a copy of the given
+// data.
+func NewMatrixColumn(data []uint16) (matrix, error) {
 	if len(data) <= 0 {
 		return nil, errInvalidColSize
 	}
@@ -50,8 +54,10 @@ func newMatrixColumn(data []uint16) (matrix, error) {
 	return m, nil
 }
 
-func newVandermondePar2Matrix(rows, cols int) (matrix, error) {
-	m, err := newMatrix(rows, cols)
+// NewVandermondePar2Matrix creates a new Vandermonde matrix using the Par2
+// specification's custom rules for generating Vandermonde matrices.
+func NewVandermondePar2Matrix(rows, cols int) (matrix, error) {
+	m, err := NewMatrix(rows, cols)
 	if err != nil {
 		return nil, err
 	}
@@ -72,8 +78,9 @@ func newVandermondePar2Matrix(rows, cols int) (matrix, error) {
 	return m, nil
 }
 
-func identityMatrix(size int) (matrix, error) {
-	m, err := newMatrix(size, size)
+// IdentityMatrix creates a square identity matrix of the given size.
+func IdentityMatrix(size int) (matrix, error) {
+	m, err := NewMatrix(size, size)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +90,7 @@ func identityMatrix(size int) (matrix, error) {
 	return m, nil
 }
 
+// Check verifies that this matrix's internal data structures are consistent.
 func (m matrix) Check() error {
 	rows := len(m)
 	if rows <= 0 {
@@ -101,11 +109,13 @@ func (m matrix) Check() error {
 	return nil
 }
 
+// Mul performs matrix multiplication with other.
+// It returns the result, modifying neither matrix in-place.
 func (m matrix) Mul(other matrix) (matrix, error) {
 	if len(m[0]) != len(other) {
 		return nil, fmt.Errorf("matrices cannot be multiplied, cols != rows")
 	}
-	result, err := newMatrix(len(m), len(other[0]))
+	result, err := NewMatrix(len(m), len(other[0]))
 	if err != nil {
 		return nil, err
 	}
@@ -129,6 +139,10 @@ func (m matrix) swapRows(r1, r2 int) error {
 	return nil
 }
 
+// GaussianElimination performs a gaussian elimination in-place on m.
+// After gaussian elimination, each row should have a single column equal to 1
+// and the final column represents the value of that variable in the system
+// of linear equations.
 func (m matrix) GaussianElimination() error {
 	rows := len(m)
 	cols := len(m[0])
@@ -182,6 +196,8 @@ func (m matrix) GaussianElimination() error {
 	return nil
 }
 
+// Augment returns a new matrix by putting other to the right of this matrix.
+// Both matrices MUST have the same number of rows.
 func (m matrix) Augment(other matrix) (matrix, error) {
 	if len(m) != len(other) {
 		return nil, errRowSizeMismatch
@@ -195,6 +211,8 @@ func (m matrix) Augment(other matrix) (matrix, error) {
 	return newM, nil
 }
 
+// Augment returns a new matrix by putting other to the bottom of this matrix.
+// Both matrices MUST have the same number of columns.
 func (m matrix) AugmentVertical(other matrix) (matrix, error) {
 	if len(m[0]) != len(other[0]) {
 		return nil, errColSizeMismatch
