@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -102,5 +103,44 @@ func TestMainPacket(t *testing.T) {
 			[16]byte{80, 65, 82, 32, 50, 46, 48, 0, 67, 114, 101, 97, 116, 111, 114, 0},
 			[16]byte{81, 117, 105, 99, 107, 80, 97, 114, 32, 48, 46, 57, 0, 0, 0, 0}}) {
 		t.Fatalf("Expected non-recovery IDs not equal to actual non-recovery IDs %v", mainPacket.NonRecoveryFileIDs)
+	}
+}
+
+func TestRecoverySlicePacket(t *testing.T) {
+	encodedFile, err := os.Open("testdata/sample.mp4.vol0+1.PAR2")
+	defer encodedFile.Close()
+	if err != nil {
+		t.Fatalf("Could not open encoded par2 file: %v", err)
+	}
+
+	scanner := NewScanner(encodedFile)
+	var packet Packet = nil
+	for scanner.Scan() {
+		fmt.Printf("packet: %v", scanner.Packet().Type())
+		if scanner.Packet().Type() == recoverySlicePacketType {
+			packet = scanner.Packet()
+			break
+		}
+	}
+
+	if scanner.Err() != nil {
+		t.Fatalf("Could not read packet: %v", scanner.Err())
+	}
+	if packet == nil {
+		t.Fatalf("Could not find recovery packet.")
+	}
+
+	recoverySlicePacket, ok := packet.(RecoverySlicePacket)
+	if !ok {
+		t.Fatalf("Could not read packet as RecoverySlicePacket")
+	}
+	if !reflect.DeepEqual(
+		recoverySlicePacket.FileID,
+		[16]byte{
+			0x38, 0xe5, 0xdd, 0xba, 0xf4, 0xbe, 0xc0, 0xa4,
+			0x70, 0x0e, 0x9a, 0x6d, 0x79, 0x28, 0x1d, 0x3d,
+		},
+	) {
+		t.Fatalf("Expected creator reovery file ID not equal to actual ID %s", recoverySlicePacket.FileID)
 	}
 }

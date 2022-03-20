@@ -77,6 +77,16 @@ func (z *Scanner) Scan() bool {
 		}
 		return true
 	}
+	err := z.scanner.Err()
+	if err == bufio.ErrTooLong {
+		// TODO: Recovery slice packets are regularly enormous and we don't want to
+		//       try copy it into memory. We just need to know where to find the
+		//       recovery data if & when we need it.
+		z.err = err
+	}
+	if err != nil {
+		z.err = err
+	}
 	return false
 }
 

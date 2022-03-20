@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/esteth/usenet/pkg/par2/reedsolomon"
 	"github.com/esteth/usenet/pkg/par2/scanner"
 )
 
@@ -25,6 +26,8 @@ type Archive struct {
 	recoveryFileIDs [][16]byte
 	// recoverySet is a map from file ID to metadata about that file.
 	recoverySet map[[16]byte]*recoveryFile
+	// creator is the arbitrary text identifying the creator of the archive.
+	creator string
 }
 
 // A recoveryFile represents a single file from the archive's recovery set.
@@ -94,6 +97,44 @@ func (a *Archive) Validate() error {
 //
 // It returns an error if it was unable to complete the repairs.
 func (a *Archive) Repair() error {
+	data := []uint16{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+	checksums := []uint16{11, 60570, 57778}
+	identity, err := reedsolomon.IdentityMatrix(len(data))
+	if err != nil {
+		return fmt.Errorf("could not create identity matrix: %w", err)
+	}
+	vandermonde, err := reedsolomon.NewVandermondePar2Matrix(3, len(data))
+	if err != nil {
+		return fmt.Errorf("could not create vandermonde matrix: %w", err)
+	}
+	parityIdentity, err := identity.AugmentVertical(vandermonde)
+	if err != nil {
+		return fmt.Errorf("could not stack identity and vandermonde matrix: %w", err)
+	}
+	sourceColumn, err := reedsolomon.NewMatrixColumn(append(data, checksums...))
+	if err != nil {
+		return fmt.Errorf("could not create column with data and checksums: %w", err)
+	}
+	solve, err := parityIdentity.Augment(sourceColumn)
+	if err != nil {
+		return fmt.Errorf("could not create problem matrix: %w", err)
+	}
+
+	// Delete some rows to pretend we lost some data
+	solve = append(solve[:4], solve[7:]...)
+
+	err = solve.GaussianElimination()
+	if err != nil {
+		return fmt.Errorf("could not solve problem matrix: %w", err)
+	}
+
+	recoveredData := make([]uint16, len(data))
+	for r, row := range solve {
+		recoveredData[r] = row[len(row)-1]
+	}
+
+	// TODO: Do something with the recoveredData.
+
 	return nil
 }
 
@@ -106,6 +147,7 @@ func FromFiles(baseDirectory string, fs ...*os.File) (Archive, error) {
 	var sliceSize uint64 = 0
 	recoveryFileIDs := make([][16]byte, 0)
 	recoverySet := make(map[[16]byte]*recoveryFile)
+	creatorText := ""
 
 	for _, f := range fs {
 		parScanner := scanner.NewScanner(f)
@@ -129,6 +171,15 @@ func FromFiles(baseDirectory string, fs ...*os.File) (Archive, error) {
 				}
 				recoverySet[fsc.FileID].populateChecksums(fsc)
 			}
+			if recoverySlice, ok := packet.(scanner.RecoverySlicePacket); ok {
+				if _, exists := recoverySet[recoverySlice.FileID]; !exists {
+					// TODO: Note the location of the recovery data if we need
+					//       to use it for repair.
+				}
+			}
+			if creatorPacket, ok := packet.(scanner.CreatorPacket); ok {
+				creatorText = creatorPacket.Creator
+			}
 		}
 	}
 	return Archive{
@@ -137,5 +188,6 @@ func FromFiles(baseDirectory string, fs ...*os.File) (Archive, error) {
 		sliceSize:       sliceSize,
 		recoveryFileIDs: recoveryFileIDs,
 		recoverySet:     recoverySet,
+		creator:         creatorText,
 	}, nil
 }
