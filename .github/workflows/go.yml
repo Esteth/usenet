@@ -16,7 +16,7 @@ jobs:
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
-        go-version: ^1.13
+        go-version: ^1.18
 
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
@@ -31,6 +31,18 @@ jobs:
 
     - name: Build
       run: go build -v ./...
+    
+    - name: Set up gotestfmt
+      run: go install github.com/haveyoudebuggedit/gotestfmt/v2/cmd/gotestfmt@latest
 
-    - name: Test
-      run: go test -v ./...
+    - run: |
+        set -euo pipefail
+        go test -json -v ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
+    
+    - name: Upload test log
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: test-log
+        path: /tmp/gotest.log
+        if-no-files-found: error
