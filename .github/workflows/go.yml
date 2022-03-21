@@ -35,7 +35,8 @@ jobs:
     - name: Set up gotestfmt
       run: go install github.com/haveyoudebuggedit/gotestfmt/v2/cmd/gotestfmt@latest
 
-    - run: |
+    - name: Test
+      run: |
         set -euo pipefail
         go test -json -v ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
     
