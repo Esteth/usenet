@@ -143,4 +143,10 @@ func TestRecoverySlicePacket(t *testing.T) {
 	) {
 		t.Fatalf("Expected creator reovery file ID not equal to actual ID %s", recoverySlicePacket.FileID)
 	}
+	if recoverySlicePacket.Data.FileOffset != 24 {
+		t.Fatalf(
+			"Expected data to be located at offset NNN but was %d",
+			recoverySlicePacket.Data.FileOffset,
+		)
+	}
 }

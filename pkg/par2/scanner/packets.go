@@ -129,8 +129,7 @@ const recoverySlicePacketType = "PAR 2.0\000RecvSlic"
 type RecoverySlicePacket struct {
 	FileID   [16]byte
 	Exponent uint32
-	// TODO: Do not store the recovery data in-memory here. Map it in as required.
-	Data []byte
+	Data     DataInFile
 }
 
 // Type implements interface Packet to return the type of the Par 2.0 Recovery Slice Packet.
@@ -140,7 +139,7 @@ func (p RecoverySlicePacket) Type() string {
 
 // NewRecoverySlicePacket creates and initializes a new RecoverySlicePacket struct from the
 // given binary packet data.
-func NewRecoverySlicePacket(data []byte) (RecoverySlicePacket, error) {
+func NewRecoverySlicePacket(filename string, data []byte) (RecoverySlicePacket, error) {
 	typ := string(data[48:64])
 	if typ != recoverySlicePacketType {
 		return RecoverySlicePacket{}, fmt.Errorf("Recovery Slice packet type not as expected. Was %s", typ)
@@ -150,7 +149,10 @@ func NewRecoverySlicePacket(data []byte) (RecoverySlicePacket, error) {
 	packet := RecoverySlicePacket{}
 	copy(packet.FileID[:], packetData[0:16])
 	packet.Exponent = binary.LittleEndian.Uint32(packetData[16:24])
-	copy(packet.Data[:], packetData[24:])
+	packet.Data = DataInFile{
+		FilePath:   filename,
+		FileOffset: 24, // TODO: Add offset into this data segment.
+	}
 
 	return packet, nil
 }

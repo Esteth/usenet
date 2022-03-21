@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"os"
 )
 
 var magicSequence = []byte{'P', 'A', 'R', '2', '\000', 'P', 'K', 'T'}
@@ -25,26 +26,28 @@ func (p *unknownPacket) Type() string {
 // A Scanner allows a PAR2 stream to be parsed packet-by-packet in the style
 // of bufio.Scanner
 type Scanner struct {
-	scanner bufio.Scanner
-	packet  Packet
-	err     error
+	filename string
+	scanner  bufio.Scanner
+	packet   Packet
+	err      error
 }
 
-// NewScanner creates a new Scanner reading the given reader.
-func NewScanner(r io.Reader) *Scanner {
+// NewScanner creates a new Scanner reading the given file.
+func NewScanner(f *os.File) *Scanner {
 	z := new(Scanner)
-	z.Reset(r)
+	z.reset(f)
 	return z
 }
 
 // Reset discards the Scanner z's state and makes it equivalent to the
 // result of it's original state from NewScanner, but reading from r instead.
 // This permits reusing a reader rather than allocating a new one.
-func (z *Scanner) Reset(r io.Reader) {
+func (z *Scanner) reset(f *os.File) {
 	*z = Scanner{
-		scanner: *bufio.NewScanner(r),
-		packet:  nil,
-		err:     nil,
+		filename: f.Name(),
+		scanner:  *bufio.NewScanner(f),
+		packet:   nil,
+		err:      nil,
 	}
 	z.scanner.Split(scanPackets)
 }
@@ -64,7 +67,7 @@ func (z *Scanner) Scan() bool {
 		} else if string(packetType) == fileSliceChecksumPacketType {
 			z.packet, z.err = NewFileSliceChecksumPacket(z.scanner.Bytes())
 		} else if string(packetType) == recoverySlicePacketType {
-			z.packet, z.err = NewRecoverySlicePacket(z.scanner.Bytes())
+			z.packet, z.err = NewRecoverySlicePacket(z.filename, z.scanner.Bytes())
 		} else if string(packetType) == creatorPacketType {
 			z.packet, z.err = NewCreatorPacket(z.scanner.Bytes())
 		} else {
