@@ -100,17 +100,17 @@ func scanMainPacket(source ScannerSource, header packetHeader) (MainPacket, erro
 	}, nil
 }
 
-func scanFileDescriptionPacket(source ScannerSource) (packet FileDescriptionPacket, err error) {
-	if _, err = io.ReadFull(source, packet.ID[:]); err != nil {
+func scanFileDescriptionPacket(reader io.Reader) (packet FileDescriptionPacket, err error) {
+	if _, err = io.ReadFull(reader, packet.ID[:]); err != nil {
 		return packet, fmt.Errorf("could not read file ID from file description packet: %w", err)
 	}
-	if _, err = io.ReadFull(source, packet.MD5[:]); err != nil {
+	if _, err = io.ReadFull(reader, packet.MD5[:]); err != nil {
 		return packet, fmt.Errorf("could not read MD5 hash from file description packet: %w", err)
 	}
-	if _, err = io.ReadFull(source, packet.MD516[:]); err != nil {
+	if _, err = io.ReadFull(reader, packet.MD516[:]); err != nil {
 		return packet, fmt.Errorf("could not read MD5-16 from file description packet: %w", err)
 	}
-	packet.Length, err = readUint64(source)
+	packet.Length, err = readUint64(reader)
 	if err != nil {
 		err = fmt.Errorf("could not read file length from file description packet: %w", err)
 		return packet, err
@@ -144,18 +144,20 @@ func scanRecoverySlicePacket(source ScannerSource, filePath string) (packet Reco
 		err = fmt.Errorf("could not read exponent from recovery slice packet", err)
 		return
 	}
-	if packet.Data.FileOffset, err = source.Seek(0, io.SeekCurrent); err != nil {
+	currentOffset, err := source.Seek(0, io.SeekCurrent)
+	if err != nil {
 		err = fmt.Errorf("could not read current file position while parsing recovery slice packet", err)
 		return
 	}
+	packet.Data.FileOffset = uint32(currentOffset)
 	packet.Data.FilePath = filePath
 
 	return
 }
 
-func scanCreatorPacket(source ScannerSource, header packetHeader) (packet CreatorPacket, err error) {
+func scanCreatorPacket(reader io.Reader, header packetHeader) (packet CreatorPacket, err error) {
 	identifierBytes := make([]byte, header.packetLength-HEADER_LENGTH)
-	if _, err = io.ReadFull(source, identifierBytes); err != nil {
+	if _, err = io.ReadFull(reader, identifierBytes); err != nil {
 		err = fmt.Errorf("could not read creator packet identifier: %w", err)
 		return
 	}
@@ -164,24 +166,24 @@ func scanCreatorPacket(source ScannerSource, header packetHeader) (packet Creato
 	return
 }
 
-func readHeader(source ScannerSource) (header packetHeader, err error) {
+func readHeader(reader io.Reader) (header packetHeader, err error) {
 	packetLengthBytes := make([]byte, 8)
-	if _, err = io.ReadFull(source, packetLengthBytes); err != nil {
+	if _, err = io.ReadFull(reader, packetLengthBytes); err != nil {
 		return
 	}
 	header.packetLength = binary.LittleEndian.Uint64(packetLengthBytes)
 
-	if _, err = io.ReadFull(source, header.md5Hash[:]); err != nil {
+	if _, err = io.ReadFull(reader, header.md5Hash[:]); err != nil {
 		err = fmt.Errorf("could not read md5 hash from packet header: %w", err)
 		return
 	}
 
-	if _, err = io.ReadFull(source, header.recoverySetId[:]); err != nil {
+	if _, err = io.ReadFull(reader, header.recoverySetId[:]); err != nil {
 		err = fmt.Errorf("could not read recover set ID from packet header: %w", err)
 		return
 	}
 
-	if _, err = io.ReadFull(source, header.packetType[:]); err != nil {
+	if _, err = io.ReadFull(reader, header.packetType[:]); err != nil {
 		err = fmt.Errorf("could not read packet type from packet header: %w", err)
 		return
 	}
@@ -189,9 +191,9 @@ func readHeader(source ScannerSource) (header packetHeader, err error) {
 	return
 }
 
-func readUint32(source ScannerSource) (result uint32, err error) {
+func readUint32(reader io.Reader) (result uint32, err error) {
 	bytes := make([]byte, 4)
-	if _, err = io.ReadFull(source, bytes); err != nil {
+	if _, err = io.ReadFull(reader, bytes); err != nil {
 		err = fmt.Errorf("could not little endian number: %w", err)
 		return
 	}
@@ -199,9 +201,9 @@ func readUint32(source ScannerSource) (result uint32, err error) {
 	return
 }
 
-func readUint64(source ScannerSource) (result uint64, err error) {
+func readUint64(reader io.Reader) (result uint64, err error) {
 	bytes := make([]byte, 8)
-	if _, err = io.ReadFull(source, bytes); err != nil {
+	if _, err = io.ReadFull(reader, bytes); err != nil {
 		err = fmt.Errorf("could not little endian number: %w", err)
 		return
 	}
