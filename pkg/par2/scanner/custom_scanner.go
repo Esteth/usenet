@@ -11,12 +11,13 @@ import (
 const HEADER_LENGTH = 64
 
 type CustomScanner struct {
-	source ScannerSource
-	packet Packet
-	err    error
+	source   seekingReader
+	filename string
+	packet   Packet
+	err      error
 }
 
-type ScannerSource interface {
+type seekingReader interface {
 	io.Reader
 	io.Seeker
 }
@@ -52,7 +53,7 @@ func (c *CustomScanner) Next() {
 	} else if packetTypeString == fileSliceChecksumPacketType {
 		c.packet, c.err = scanFileSliceChecksumPacket(c.source, header)
 	} else if packetTypeString == recoverySlicePacketType {
-		c.packet, c.err = scanRecoverySlicePacket(c.source, filePath)
+		c.packet, c.err = scanRecoverySlicePacket(c.source, c.filename)
 	} else if packetTypeString == creatorPacketType {
 		c.packet, c.err = scanCreatorPacket(c.source, header)
 	} else {
@@ -62,16 +63,16 @@ func (c *CustomScanner) Next() {
 	}
 }
 
-func scanMainPacket(source ScannerSource, header packetHeader) (MainPacket, error) {
+func scanMainPacket(reader io.Reader, header packetHeader) (MainPacket, error) {
 	var packet MainPacket
 
-	sliceSize, err := readUint64(source)
+	sliceSize, err := readUint64(reader)
 	if err != nil {
 		err = fmt.Errorf("could not read slice size from main packet: %w", err)
 		return packet, err
 	}
 
-	numRecoveryFiles, err := readUint32(source)
+	numRecoveryFiles, err := readUint32(reader)
 	if err != nil {
 		err = fmt.Errorf("could not read number of recovery files from main packet: %w", err)
 		return packet, err
@@ -79,8 +80,8 @@ func scanMainPacket(source ScannerSource, header packetHeader) (MainPacket, erro
 
 	recoveryFileIDs := make([][16]byte, numRecoveryFiles)
 	for i := uint32(0); i < numRecoveryFiles; i++ {
-		if _, err = io.ReadFull(source, recoveryFileIDs[i][:]); err != nil {
-			return packet, fmt.Errorf("could not read recovery file ID %i from main packet: %w", i, err)
+		if _, err = io.ReadFull(reader, recoveryFileIDs[i][:]); err != nil {
+			return packet, fmt.Errorf("could not read recovery file ID %d from main packet: %w", i, err)
 		}
 	}
 
@@ -88,8 +89,8 @@ func scanMainPacket(source ScannerSource, header packetHeader) (MainPacket, erro
 	numNonRecoveryFiles := (header.packetLength - HEADER_LENGTH - 12 - 16*uint64(numRecoveryFiles)) / 16
 	nonRecoveryFileIDs := make([][16]byte, numNonRecoveryFiles)
 	for i := uint64(0); i < numNonRecoveryFiles; i++ {
-		if _, err = io.ReadFull(source, nonRecoveryFileIDs[i][:]); err != nil {
-			return packet, fmt.Errorf("could not read non recovery file ID %i from main packet: %w", i, err)
+		if _, err = io.ReadFull(reader, nonRecoveryFileIDs[i][:]); err != nil {
+			return packet, fmt.Errorf("could not read non recovery file ID %d from main packet: %w", i, err)
 		}
 	}
 
@@ -119,8 +120,8 @@ func scanFileDescriptionPacket(reader io.Reader) (packet FileDescriptionPacket, 
 	return
 }
 
-func scanFileSliceChecksumPacket(source ScannerSource, header packetHeader) (packet FileSliceChecksumPacket, err error) {
-	if _, err = io.ReadFull(source, packet.FileID[:]); err != nil {
+func scanFileSliceChecksumPacket(reader io.Reader, header packetHeader) (packet FileSliceChecksumPacket, err error) {
+	if _, err = io.ReadFull(reader, packet.FileID[:]); err != nil {
 		return packet, fmt.Errorf("could not read file ID from file slice checksum packet: %w", err)
 	}
 	numSlices := (header.packetLength - 16 - HEADER_LENGTH) / 20
@@ -128,25 +129,25 @@ func scanFileSliceChecksumPacket(source ScannerSource, header packetHeader) (pac
 	packet.SliceCRC32s = make([][4]byte, numSlices)
 
 	for i := uint64(0); i < numSlices; i++ {
-		if _, err = io.ReadFull(source, packet.SliceHashes[i][:]); err != nil {
-			return packet, fmt.Errorf("could not read hash %i from file slice checksum packet: %w", i, err)
+		if _, err = io.ReadFull(reader, packet.SliceHashes[i][:]); err != nil {
+			return packet, fmt.Errorf("could not read hash %d from file slice checksum packet: %w", i, err)
 		}
-		if _, err = io.ReadFull(source, packet.SliceCRC32s[i][:]); err != nil {
-			return packet, fmt.Errorf("could not read CRC32 %i from file slice checksum packet: %w", i, err)
+		if _, err = io.ReadFull(reader, packet.SliceCRC32s[i][:]); err != nil {
+			return packet, fmt.Errorf("could not read CRC32 %d from file slice checksum packet: %w", i, err)
 		}
 	}
 
 	return
 }
 
-func scanRecoverySlicePacket(source ScannerSource, filePath string) (packet RecoverySlicePacket, err error) {
+func scanRecoverySlicePacket(source seekingReader, filePath string) (packet RecoverySlicePacket, err error) {
 	if packet.Exponent, err = readUint32(source); err != nil {
-		err = fmt.Errorf("could not read exponent from recovery slice packet", err)
+		err = fmt.Errorf("could not read exponent from recovery slice packet: %w", err)
 		return
 	}
 	currentOffset, err := source.Seek(0, io.SeekCurrent)
 	if err != nil {
-		err = fmt.Errorf("could not read current file position while parsing recovery slice packet", err)
+		err = fmt.Errorf("could not read current file position while parsing recovery slice packet: %w", err)
 		return
 	}
 	packet.Data.FileOffset = uint32(currentOffset)
