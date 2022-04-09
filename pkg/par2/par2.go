@@ -44,8 +44,8 @@ type recoveryFile struct {
 // populateDescription copies the file's descriptive attributes from the given scanner.FileDescriptionPacket.
 func (rf *recoveryFile) populateDescription(fd scanner.FileDescriptionPacket) {
 	rf.ID = fd.ID
-	rf.Name = fd.Name
-	rf.Length = fd.Length
+	rf.Name = fd.FileName
+	rf.Length = fd.FileLength
 	rf.MD5 = fd.MD5
 	rf.MD516 = fd.MD516
 }
