@@ -52,7 +52,8 @@ func main() {
 
 		if recoverySlicePacket, ok := packet.(scanner.RecoverySlicePacket); ok {
 			fmt.Printf("Exponent: %d\n", recoverySlicePacket.Exponent)
-			fmt.Printf("Data: %v\n", recoverySlicePacket.Data)
+			fmt.Printf("Data Path: %v\n", recoverySlicePacket.RecoveryDataFilePath)
+			fmt.Printf("Data Offset: %d\n", recoverySlicePacket.RecoveryDataFileOffset)
 		}
 
 		if creatorPacket, ok := packet.(scanner.CreatorPacket); ok {
