@@ -33,11 +33,11 @@ func main() {
 		}
 
 		if fileDescriptionPacket, ok := packet.(scanner.FileDescriptionPacket); ok {
-			fmt.Printf("File Name: %s\n", fileDescriptionPacket.Name)
+			fmt.Printf("File Name: %s\n", fileDescriptionPacket.FileName)
 			fmt.Printf("File ID: %v\n", fileDescriptionPacket.ID)
 			fmt.Printf("File MD5: %v\n", fileDescriptionPacket.MD5)
 			fmt.Printf("File MD5-16: %v\n", fileDescriptionPacket.MD516)
-			fmt.Printf("File Length: %d\n", fileDescriptionPacket.Length)
+			fmt.Printf("File Length: %d\n", fileDescriptionPacket.FileLength)
 		}
 
 		if fileSliceChecksumPacket, ok := packet.(scanner.FileSliceChecksumPacket); ok {
@@ -52,7 +52,8 @@ func main() {
 
 		if recoverySlicePacket, ok := packet.(scanner.RecoverySlicePacket); ok {
 			fmt.Printf("Exponent: %d\n", recoverySlicePacket.Exponent)
-			fmt.Printf("Data: %v\n", recoverySlicePacket.Data)
+			fmt.Printf("Data Path: %v\n", recoverySlicePacket.RecoveryDataFilePath)
+			fmt.Printf("Data Offset: %d\n", recoverySlicePacket.RecoveryDataFileOffset)
 		}
 
 		if creatorPacket, ok := packet.(scanner.CreatorPacket); ok {

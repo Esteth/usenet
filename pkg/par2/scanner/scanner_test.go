@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -96,12 +95,8 @@ func TestMainPacket(t *testing.T) {
 	}
 	if !reflect.DeepEqual(
 		mainPacket.NonRecoveryFileIDs,
-		[][16]byte{
-			{80, 65, 82, 50, 0, 80, 75, 84, 76, 0, 0, 0, 0, 0, 0, 0},
-			{73, 201, 138, 29, 80, 154, 229, 188, 13, 245, 176, 216, 48, 157, 196, 51},
-			{56, 229, 221, 186, 244, 190, 192, 164, 112, 14, 154, 109, 121, 40, 29, 61},
-			{80, 65, 82, 32, 50, 46, 48, 0, 67, 114, 101, 97, 116, 111, 114, 0},
-			{81, 117, 105, 99, 107, 80, 97, 114, 32, 48, 46, 57, 0, 0, 0, 0}}) {
+		[][16]byte{},
+	) {
 		t.Fatalf("Expected non-recovery IDs not equal to actual non-recovery IDs %v", mainPacket.NonRecoveryFileIDs)
 	}
 }
@@ -116,7 +111,6 @@ func TestRecoverySlicePacket(t *testing.T) {
 	scanner := NewScanner(encodedFile)
 	var packet Packet = nil
 	for scanner.Scan() {
-		fmt.Printf("packet: %v", scanner.Packet().Type())
 		if scanner.Packet().Type() == recoverySlicePacketType {
 			packet = scanner.Packet()
 			break
@@ -134,19 +128,13 @@ func TestRecoverySlicePacket(t *testing.T) {
 	if !ok {
 		t.Fatalf("Could not read packet as RecoverySlicePacket")
 	}
-	if !reflect.DeepEqual(
-		recoverySlicePacket.FileID,
-		[16]byte{
-			0x38, 0xe5, 0xdd, 0xba, 0xf4, 0xbe, 0xc0, 0xa4,
-			0x70, 0x0e, 0x9a, 0x6d, 0x79, 0x28, 0x1d, 0x3d,
-		},
-	) {
-		t.Fatalf("Expected creator reovery file ID not equal to actual ID %s", recoverySlicePacket.FileID)
+	if recoverySlicePacket.Exponent != 0 {
+		t.Fatalf("Expected exponent to be 0 but was %d", recoverySlicePacket.Exponent)
 	}
-	if recoverySlicePacket.Data.FileOffset != 24 {
+	if recoverySlicePacket.RecoveryDataFileOffset != 68 {
 		t.Fatalf(
-			"Expected data to be located at offset NNN but was %d",
-			recoverySlicePacket.Data.FileOffset,
+			"Expected data to be located at offset 68 but was %d",
+			recoverySlicePacket.RecoveryDataFileOffset,
 		)
 	}
 }
