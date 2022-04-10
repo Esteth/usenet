@@ -32,13 +32,20 @@ type Archive struct {
 
 // A recoveryFile represents a single file from the archive's recovery set.
 type recoveryFile struct {
-	ID          [16]byte
-	MD5         [16]byte
-	MD516       [16]byte
-	Length      uint64
-	Name        string
-	SliceMD5s   [][16]byte
-	SliceCRC32s [][4]byte
+	ID           [16]byte
+	MD5          [16]byte
+	MD516        [16]byte
+	Length       uint64
+	Name         string
+	SliceMD5s    [][16]byte
+	SliceCRC32s  [][4]byte
+	RecoveryData []recoveryData
+}
+
+type recoveryData struct {
+	exponent   uint32
+	filePath   string
+	fileOffset uint32
 }
 
 // populateDescription copies the file's descriptive attributes from the given scanner.FileDescriptionPacket.
@@ -54,6 +61,14 @@ func (rf *recoveryFile) populateDescription(fd scanner.FileDescriptionPacket) {
 func (rf *recoveryFile) populateChecksums(fsc scanner.FileSliceChecksumPacket) {
 	rf.SliceMD5s = fsc.SliceHashes
 	rf.SliceCRC32s = fsc.SliceCRC32s
+}
+
+func (rf *recoveryFile) addRecoveryData(rs scanner.RecoverySlicePacket) {
+	rf.RecoveryData = append(rf.RecoveryData, recoveryData{
+		exponent:   rs.Exponent,
+		filePath:   rs.RecoveryDataFilePath,
+		fileOffset: rs.RecoveryDataFileOffset,
+	})
 }
 
 // Validate verifies the checksums of the recovery set files, returning nil iff all files are undamaged.
@@ -171,10 +186,9 @@ func FromFiles(baseDirectory string, fs ...*os.File) (Archive, error) {
 				}
 				recoverySet[fsc.FileID].populateChecksums(fsc)
 			}
-			if recoverySlice, ok := packet.(scanner.RecoverySlicePacket); ok {
-				if _, exists := recoverySet[recoverySlice.FileID]; !exists {
-					// TODO: Note the location of the recovery data if we need
-					//       to use it for repair.
+			if rsp, ok := packet.(scanner.RecoverySlicePacket); ok {
+				if rf, exists := recoverySet[rsp.FileID]; !exists {
+					rf.addRecoveryData(rsp)
 				}
 			}
 			if creatorPacket, ok := packet.(scanner.CreatorPacket); ok {
