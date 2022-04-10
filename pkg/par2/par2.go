@@ -30,7 +30,7 @@ type Archive struct {
 	creator string
 }
 
-// A recoveryFile represents a single file from the archive's recovery set.
+// recoveryFile represents a single file from the archive's recovery set.
 type recoveryFile struct {
 	ID           [16]byte
 	MD5          [16]byte
@@ -42,6 +42,7 @@ type recoveryFile struct {
 	RecoveryData []recoveryData
 }
 
+// recoveryData represents a single piece of recovery data on disk.
 type recoveryData struct {
 	exponent   uint32
 	filePath   string
