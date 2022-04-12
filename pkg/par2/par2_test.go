@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"reflect"
 	"testing"
 )
 
@@ -93,7 +94,7 @@ func TestValidateValidArchive(t *testing.T) {
 		t.Fatalf("Could not create Archive from file: %v", err)
 	}
 
-	if err = archive.Validate(); err != nil {
+	if _, err = archive.Validate(); err != nil {
 		t.Fatalf("Intact archive did not validate as expected: %v", err)
 	}
 }
@@ -110,8 +111,12 @@ func TestValidateBrokenFiles(t *testing.T) {
 		t.Fatalf("Could not create Archive from file: %v", err)
 	}
 
-	if err = archive.Validate(); err == nil {
-		t.Fatalf("Broken archive unexpectedly validated.")
+	brokenSlices, err := archive.Validate()
+	if err != nil {
+		t.Fatalf("Encountered error while validating archive: %v", err)
+	}
+	if reflect.DeepEqual(brokenSlices, []int{}) {
+		t.Fatalf("Broken archive unexpectedly validated")
 	}
 }
 
@@ -127,7 +132,11 @@ func TestRepairValidArchive(t *testing.T) {
 		t.Fatalf("Could not create Archive from file: %v", err)
 	}
 
-	if err = archive.Repair(); err != nil {
+	badSlices, err := archive.Validate()
+	if err != nil {
+		t.Fatalf("Could not get bad slice details from archive: %v", err)
+	}
+	if err = archive.Repair(badSlices); err != nil {
 		t.Fatalf("Intact archive threw error when asked to repair: %v", err)
 	}
 }
@@ -151,7 +160,11 @@ func TestRepairBrokenFiles(t *testing.T) {
 		t.Fatalf("Could not create Archive from file: %v", err)
 	}
 
-	if err = archive.Repair(); err != nil {
+	badSlices, err := archive.Validate()
+	if err != nil {
+		t.Fatalf("Could not get bad slice details from archive: %v", err)
+	}
+	if err = archive.Repair(badSlices); err != nil {
 		t.Fatalf("Intact archive threw error when asked to repair: %v", err)
 	}
 

@@ -6,8 +6,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 
-	"github.com/esteth/usenet/pkg/par2/reedsolomon"
 	"github.com/esteth/usenet/pkg/par2/scanner"
 )
 
@@ -72,85 +72,150 @@ func (rf *recoveryFile) addRecoveryData(rs scanner.RecoverySlicePacket) {
 	})
 }
 
+func (rf recoveryFile) sliceCount() int {
+	return len(rf.SliceMD5s)
+}
+
+// Validate verifies the checksums of the recovery file, returning nil iff all files are undamaged.
+func (rf recoveryFile) validate(baseDirectory string, sliceSize uint64) ([]int, error) {
+	badSlices := make([]int, 0)
+
+	f, err := os.Open(filepath.Join(baseDirectory, rf.Name))
+	if err != nil {
+		return badSlices, fmt.Errorf("Could not find expected file to validate at %s", rf.Name)
+	}
+	defer f.Close()
+
+	buf := make([]byte, sliceSize)
+	for i, expectedChecksum := range rf.SliceMD5s {
+		bytesRead, err := f.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				return badSlices, fmt.Errorf("Could not read from recovery file %s: %w", rf.Name, err)
+			}
+		}
+		// The specification says that "empty" bytes should be zeroed.
+		for i := uint64(bytesRead); i < sliceSize; i++ {
+			buf[i] = 0
+		}
+
+		actualChecksum := md5.Sum(buf)
+		if !reflect.DeepEqual(actualChecksum, expectedChecksum) {
+			badSlices = append(badSlices, i)
+		}
+	}
+	return badSlices, nil
+}
+
+func (rf recoveryFile) repair(baseDirectory string, sliceSize uint64, missingSlices []int) error {
+	brokenFile, err := os.Open(filepath.Join(baseDirectory, rf.Name))
+	if err != nil {
+		return fmt.Errorf("Could not find expected file to validate at %s", rf.Name)
+	}
+	defer brokenFile.Close()
+
+	// rawData := make([]byte, sliceSize)
+	// if _, err = io.ReadFull(brokenFile, rawData); err != nil {
+	// 	return fmt.Errorf("Could not read raw data from input file: %w", err)
+	// }
+
+	// // reinterpret-cast the raw data into a []uint16
+	// const SIZEOF_UINT16 = 2
+	// header := (*reflect.SliceHeader)(unsafe.Pointer(&rawData))
+	// header.Len /= SIZEOF_UINT16
+	// header.Cap /= SIZEOF_UINT16
+	// data := *(*[]uint16)(unsafe.Pointer(&header))
+
+	// //	checksums := make([]byte)
+	// checksums := []uint16{11, 60570, 57778}
+	// identity, err := reedsolomon.IdentityMatrix(len(data))
+	// if err != nil {
+	// 	return fmt.Errorf("could not create identity matrix: %w", err)
+	// }
+	// vandermonde, err := reedsolomon.NewVandermondePar2Matrix(len(checksums), len(data))
+	// if err != nil {
+	// 	return fmt.Errorf("could not create vandermonde matrix: %w", err)
+	// }
+	// parityIdentity, err := identity.AugmentVertical(vandermonde)
+	// if err != nil {
+	// 	return fmt.Errorf("could not stack identity and vandermonde matrix: %w", err)
+	// }
+	// sourceColumn, err := reedsolomon.NewMatrixColumn(append(data, checksums...))
+	// if err != nil {
+	// 	return fmt.Errorf("could not create column with data and checksums: %w", err)
+	// }
+	// solve, err := parityIdentity.Augment(sourceColumn)
+	// if err != nil {
+	// 	return fmt.Errorf("could not create problem matrix: %w", err)
+	// }
+
+	// // Delete some rows to pretend we lost some data
+	// solve = append(solve[:4], solve[7:]...)
+
+	// err = solve.GaussianElimination()
+	// if err != nil {
+	// 	return fmt.Errorf("could not solve problem matrix: %w", err)
+	// }
+
+	// recoveredData := make([]uint16, len(data))
+	// for r, row := range solve {
+	// 	recoveredData[r] = row[len(row)-1]
+	// }
+
+	// TODO: Do something with the recoveredData.
+
+	return nil
+}
+
 // Validate verifies the checksums of the recovery set files, returning nil iff all files are undamaged.
-func (a *Archive) Validate() error {
+func (a *Archive) Validate() ([]int, error) {
+	badSlices := make([]int, 0)
+	sliceOffset := 0
 	for _, id := range a.recoveryFileIDs {
 		recoveryFile, exists := a.recoverySet[id]
 		if !exists {
-			return fmt.Errorf("Could not find checksum data for file ID %v", id)
+			return badSlices, fmt.Errorf("Could not find checksum data for file ID %v", id)
 		}
-		f, err := os.Open(filepath.Join(a.baseDirectory, recoveryFile.Name))
+		badFileSlices, err := recoveryFile.validate(a.baseDirectory, a.sliceSize)
+		for i := range badFileSlices {
+			badFileSlices[i] = badFileSlices[i] + sliceOffset
+		}
+		badSlices = append(badSlices, badFileSlices...)
 		if err != nil {
-			return fmt.Errorf("Could not find expected file to validate at %s", recoveryFile.Name)
+			return badSlices, fmt.Errorf("Could not validate recovery file %v: %w", id, err)
 		}
-		defer f.Close()
-
-		buf := make([]byte, a.sliceSize)
-		for i, expectedChecksum := range recoveryFile.SliceMD5s {
-			bytesRead, err := f.Read(buf)
-			if err != nil {
-				if err == io.EOF {
-					break
-				} else {
-					return fmt.Errorf("Could not read from recovery file %s: %w", recoveryFile.Name, err)
-				}
-			}
-			// The specification says that "empty" bytes should be zeroed.
-			for i := uint64(bytesRead); i < a.sliceSize; i++ {
-				buf[i] = 0
-			}
-
-			actualChecksum := md5.Sum(buf)
-			if actualChecksum != expectedChecksum {
-				return fmt.Errorf("Checksum failed for file %s in slice %d", recoveryFile.Name, i)
-			}
-		}
+		sliceOffset += len(recoveryFile.SliceMD5s)
 	}
-	return nil
+	return badSlices, nil
 }
 
 // Repair attempts to repair the recovery set files if they are damaged.
 //
 // It returns an error if it was unable to complete the repairs.
-func (a *Archive) Repair() error {
-	data := []uint16{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	checksums := []uint16{11, 60570, 57778}
-	identity, err := reedsolomon.IdentityMatrix(len(data))
-	if err != nil {
-		return fmt.Errorf("could not create identity matrix: %w", err)
-	}
-	vandermonde, err := reedsolomon.NewVandermondePar2Matrix(3, len(data))
-	if err != nil {
-		return fmt.Errorf("could not create vandermonde matrix: %w", err)
-	}
-	parityIdentity, err := identity.AugmentVertical(vandermonde)
-	if err != nil {
-		return fmt.Errorf("could not stack identity and vandermonde matrix: %w", err)
-	}
-	sourceColumn, err := reedsolomon.NewMatrixColumn(append(data, checksums...))
-	if err != nil {
-		return fmt.Errorf("could not create column with data and checksums: %w", err)
-	}
-	solve, err := parityIdentity.Augment(sourceColumn)
-	if err != nil {
-		return fmt.Errorf("could not create problem matrix: %w", err)
-	}
+func (a *Archive) Repair(missingSlices []int) error {
+	firstSliceInFile := 0
+	for _, id := range a.recoveryFileIDs {
+		recoveryFile, exists := a.recoverySet[id]
+		if !exists {
+			return fmt.Errorf("Could not find checksum data for file ID %v", id)
+		}
 
-	// Delete some rows to pretend we lost some data
-	solve = append(solve[:4], solve[7:]...)
+		// TODO: Optimize this to subslice missingSlices instead of copying.
+		lastSliceInFile := firstSliceInFile + recoveryFile.sliceCount() - 1
+		missingFileSlices := make([]int, 0)
+		for _, missingSlice := range missingSlices {
+			if missingSlice >= firstSliceInFile && missingSlice <= lastSliceInFile {
+				missingFileSlices = append(missingFileSlices, missingSlice)
+			}
+		}
+		firstSliceInFile += recoveryFile.sliceCount()
 
-	err = solve.GaussianElimination()
-	if err != nil {
-		return fmt.Errorf("could not solve problem matrix: %w", err)
+		if err := recoveryFile.repair(a.baseDirectory, a.sliceSize, missingFileSlices); err != nil {
+			return fmt.Errorf("Could not validate recovery file %v: %w", id, err)
+		}
 	}
-
-	recoveredData := make([]uint16, len(data))
-	for r, row := range solve {
-		recoveredData[r] = row[len(row)-1]
-	}
-
-	// TODO: Do something with the recoveredData.
-
 	return nil
 }
 
