@@ -2,15 +2,15 @@ package nzb
 
 import (
 	"encoding/xml"
+	"fmt"
 	"os"
 	"sort"
 	"sync"
 
-	"github.com/pkg/errors"
 	"golang.org/x/net/html/charset"
 )
 
-// An Nzb represents the contents of an NZB file. 
+// An Nzb represents the contents of an NZB file.
 type Nzb struct {
 	Files []File `xml:"file"`
 }
@@ -32,14 +32,14 @@ type Segment struct {
 func FromFile(filename string) (Nzb, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return Nzb{}, errors.Wrapf(err, "could not open '%s'", filename)
+		return Nzb{}, fmt.Errorf("could not open '%s': %w", filename, err)
 	}
 	var nzb Nzb
 	decoder := xml.NewDecoder(file)
 	decoder.CharsetReader = charset.NewReaderLabel
 	err = decoder.Decode(&nzb)
 	if err != nil {
-		return Nzb{}, errors.Wrapf(err, "could not parse '%s' as NZB", filename)
+		return Nzb{}, fmt.Errorf("could not parse '%s' as NZB: %w", filename, err)
 	}
 
 	// Sort each file's segments into order

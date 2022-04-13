@@ -1,8 +1,7 @@
 module github.com/esteth/usenet
 
-go 1.16
+go 1.18
 
-require (
-	github.com/pkg/errors v0.9.1
-	golang.org/x/net v0.0.0-20210510120150-4163338589ed
-)
+require golang.org/x/net v0.0.0-20210510120150-4163338589ed
+
+require golang.org/x/text v0.3.6 // indirect

@@ -4,14 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"hash"
 	"hash/crc32"
 	"io"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type header struct {
@@ -19,7 +19,7 @@ type header struct {
 	multipart  bool
 	name       string
 	offset     int64
-	size 	   int64
+	size       int64
 }
 
 // A Reader is an io.Reader that can be read to retrieve
@@ -88,7 +88,7 @@ func (z *Reader) Read(buf []byte) (n int, err error) {
 				z.foundHeader = true
 				z.header, err = parseBegin(z.s.Text())
 				if err != nil {
-					return n, errors.Wrap(err, "failed to parse ybegin header")
+					return n, fmt.Errorf("failed to parse ybegin header: %w", err)
 				}
 				if z.header.multipart {
 					scanSucceeded = z.s.Scan()
@@ -110,7 +110,7 @@ func (z *Reader) Read(buf []byte) (n int, err error) {
 				z.foundHeader = false
 				err = z.validateEnd(z.s.Text())
 				if err != nil {
-					return n, errors.Wrap(err, "Failed to validate footer")
+					return n, fmt.Errorf("Failed to validate footer: %w", err)
 				}
 				continue
 			} else {
@@ -166,7 +166,7 @@ func (z *Reader) Offset() (int64, error) {
 // readLine reads a single line of input data from intput into output.
 // It returns the number of bytes written to output and and error.
 //
-// Note: readLine should only be called when the Reader is positioned between ybegin and yend. 
+// Note: readLine should only be called when the Reader is positioned between ybegin and yend.
 func (z *Reader) readLine(output []byte, input []byte) (n int, err error) {
 	// Before we return, add all the bytes we wrote to the ongoing CRC32
 	defer func() { z.hash.Write(output[:n]) }()
@@ -204,25 +204,25 @@ func (z *Reader) readLine(output []byte, input []byte) (n int, err error) {
 func parseBegin(beginLine string) (h header, err error) {
 	fields, err := parseHeader(beginLine)
 	if err != nil {
-		return header{}, errors.Wrapf(err, "Failed to parse ybegin line: %v", beginLine)
+		return header{}, fmt.Errorf("Failed to parse ybegin line '%v': %w", beginLine, err)
 	}
 
 	h.lineLength, err = strconv.Atoi(fields["line"])
 	if err != nil {
-		return header{}, errors.Wrapf(err, "could not convert 'line' to int: %s", fields["line"])
+		return header{}, fmt.Errorf("could not convert 'line' to int '%s': %w", fields["line"], err)
 	}
 
 	if size, ok := fields["size"]; ok {
 		h.size, err = strconv.ParseInt(size, 10, 0)
 		if err != nil {
-			return header{}, errors.Wrapf(err, "could not convert 'size' to int: %s", fields["size"])
+			return header{}, fmt.Errorf("could not convert 'size' to int '%s': %w", fields["size"], err)
 		}
 	} else {
 		return header{}, errors.New("ybegin header does not contain size field")
 	}
 
 	if name, ok := fields["name"]; ok {
-		h.name = name	
+		h.name = name
 	} else {
 		return header{}, errors.New("ybegin header does not contain name field")
 	}
@@ -230,7 +230,7 @@ func parseBegin(beginLine string) (h header, err error) {
 	if _, ok := fields["part"]; ok {
 		h.multipart = true
 	}
-	
+
 	return
 }
 
@@ -238,13 +238,13 @@ func parseBegin(beginLine string) (h header, err error) {
 func parsePart(beginLine string) (offset int64, size int64, err error) {
 	fields, err := parseHeader(beginLine)
 	if err != nil {
-		return 0, 0, errors.Wrapf(err, "Failed to parse ypart line: %v", beginLine)
+		return 0, 0, fmt.Errorf("Failed to parse ypart line '%v': %w", beginLine, err)
 	}
 
 	if offsetString, ok := fields["begin"]; ok {
 		offset, err = strconv.ParseInt(offsetString, 10, 0)
 		if err != nil {
-			return 0, 0, errors.Wrapf(err, "could not convert 'begin' to int: %s", fields["begin"])
+			return 0, 0, fmt.Errorf("could not convert 'begin' to int '%s': %w", fields["begin"], err)
 		}
 		offset-- // NZB files use 1-indexed numbers
 	} else {
@@ -254,13 +254,13 @@ func parsePart(beginLine string) (offset int64, size int64, err error) {
 	if endString, ok := fields["end"]; ok {
 		end, err := strconv.ParseInt(endString, 10, 0)
 		if err != nil {
-			return 0, 0, errors.Wrapf(err, "could not convert 'end' to int: %s", fields["end"])
+			return 0, 0, fmt.Errorf("could not convert 'end' to int '%s': %w", fields["end"], err)
 		}
 		size = end - offset
 	} else {
 		return 0, 0, errors.New("ypart header does not contain end field")
 	}
-	
+
 	return
 }
 
@@ -268,29 +268,29 @@ func parsePart(beginLine string) (offset int64, size int64, err error) {
 func (z *Reader) validateEnd(endLine string) error {
 	fields, err := parseHeader(endLine)
 	if err != nil {
-		return errors.Wrapf(err, "Failed to parse yend line: %v", endLine)
+		return fmt.Errorf("Failed to parse yend line '%v': %w", endLine, err)
 	}
 
 	// Only conduct a CRC32 check if the checksum is present in the footer
 	if expectedString, ok := fields["crc32"]; ok {
 		expected, err := hex.DecodeString(expectedString)
 		if err != nil {
-			return errors.Wrapf(err, "CRC32 Check Failure. Could not parse checksum %s", expectedString)
+			return fmt.Errorf("CRC32 Check Failure. Could not parse checksum '%s': %w", expectedString, err)
 		}
 		actual := z.hash.Sum(nil)
 
 		if !bytes.Equal(expected, actual) {
-			return errors.Errorf("CRC32 Check failure. Expected %v, Actual %v", expected, actual)
+			return fmt.Errorf("CRC32 Check failure. Expected %v, Actual %v", expected, actual)
 		}
 	}
 
 	if sizeString, ok := fields["size"]; ok {
 		size, err := strconv.ParseInt(sizeString, 10, 0)
 		if err != nil {
-			return errors.Wrap(err, "size validation failure: Could not parse size in footer")
+			return fmt.Errorf("size validation failure: Could not parse size in footer: %w", err)
 		}
 		if size != z.header.size {
-			return errors.Errorf(
+			return fmt.Errorf(
 				"header (%d) and footer (%d) do not agree on size. Could not validate",
 				z.header.size,
 				size)
@@ -309,7 +309,7 @@ func parseHeader(line string) (m map[string]string, err error) {
 		re := regexp.MustCompile(`(\w+)=([^\s]+)`)
 		result := re.FindSubmatch([]byte(field))
 		if result == nil || len(result) == 0 {
-			return nil, errors.Wrapf(err, "Failed to parse header field \"%v\"", field)
+			return nil, fmt.Errorf("Failed to parse header field \"%v\"", field)
 		}
 		key := string(result[1])
 		val := string(result[2])

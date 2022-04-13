@@ -7,7 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"unsafe"
 
+	"github.com/esteth/usenet/pkg/par2/reedsolomon"
 	"github.com/esteth/usenet/pkg/par2/scanner"
 )
 
@@ -116,53 +118,50 @@ func (rf recoveryFile) repair(baseDirectory string, sliceSize uint64, missingSli
 	}
 	defer brokenFile.Close()
 
-	// rawData := make([]byte, sliceSize)
-	// if _, err = io.ReadFull(brokenFile, rawData); err != nil {
-	// 	return fmt.Errorf("Could not read raw data from input file: %w", err)
-	// }
+	rawData := make([]byte, sliceSize)
+	if _, err = io.ReadFull(brokenFile, rawData); err != nil {
+		return fmt.Errorf("Could not read raw data from input file: %w", err)
+	}
 
-	// // reinterpret-cast the raw data into a []uint16
-	// const SIZEOF_UINT16 = 2
-	// header := (*reflect.SliceHeader)(unsafe.Pointer(&rawData))
-	// header.Len /= SIZEOF_UINT16
-	// header.Cap /= SIZEOF_UINT16
-	// data := *(*[]uint16)(unsafe.Pointer(&header))
+	// reinterpret-cast the raw data into a []uint16
+	numUint16s := uintptr(len(rawData)) * unsafe.Sizeof(rawData[0]) / unsafe.Sizeof(uint16(0))
+	data := unsafe.Slice((*uint16)(unsafe.Pointer(&rawData[0])), numUint16s)
 
-	// //	checksums := make([]byte)
-	// checksums := []uint16{11, 60570, 57778}
-	// identity, err := reedsolomon.IdentityMatrix(len(data))
-	// if err != nil {
-	// 	return fmt.Errorf("could not create identity matrix: %w", err)
-	// }
-	// vandermonde, err := reedsolomon.NewVandermondePar2Matrix(len(checksums), len(data))
-	// if err != nil {
-	// 	return fmt.Errorf("could not create vandermonde matrix: %w", err)
-	// }
-	// parityIdentity, err := identity.AugmentVertical(vandermonde)
-	// if err != nil {
-	// 	return fmt.Errorf("could not stack identity and vandermonde matrix: %w", err)
-	// }
-	// sourceColumn, err := reedsolomon.NewMatrixColumn(append(data, checksums...))
-	// if err != nil {
-	// 	return fmt.Errorf("could not create column with data and checksums: %w", err)
-	// }
-	// solve, err := parityIdentity.Augment(sourceColumn)
-	// if err != nil {
-	// 	return fmt.Errorf("could not create problem matrix: %w", err)
-	// }
+	//	checksums := make([]byte)
+	checksums := []uint16{11, 60570, 57778}
+	identity, err := reedsolomon.IdentityMatrix(len(data))
+	if err != nil {
+		return fmt.Errorf("could not create identity matrix: %w", err)
+	}
+	vandermonde, err := reedsolomon.NewVandermondePar2Matrix(len(checksums), len(data))
+	if err != nil {
+		return fmt.Errorf("could not create vandermonde matrix: %w", err)
+	}
+	parityIdentity, err := identity.AugmentVertical(vandermonde)
+	if err != nil {
+		return fmt.Errorf("could not stack identity and vandermonde matrix: %w", err)
+	}
+	sourceColumn, err := reedsolomon.NewMatrixColumn(append(data, checksums...))
+	if err != nil {
+		return fmt.Errorf("could not create column with data and checksums: %w", err)
+	}
+	solve, err := parityIdentity.Augment(sourceColumn)
+	if err != nil {
+		return fmt.Errorf("could not create problem matrix: %w", err)
+	}
 
-	// // Delete some rows to pretend we lost some data
-	// solve = append(solve[:4], solve[7:]...)
+	// Delete some rows to pretend we lost some data
+	solve = append(solve[:4], solve[7:]...)
 
-	// err = solve.GaussianElimination()
-	// if err != nil {
-	// 	return fmt.Errorf("could not solve problem matrix: %w", err)
-	// }
+	err = solve.GaussianElimination()
+	if err != nil {
+		return fmt.Errorf("could not solve problem matrix: %w", err)
+	}
 
-	// recoveredData := make([]uint16, len(data))
-	// for r, row := range solve {
-	// 	recoveredData[r] = row[len(row)-1]
-	// }
+	recoveredData := make([]uint16, len(data))
+	for r, row := range solve {
+		recoveredData[r] = row[len(row)-1]
+	}
 
 	// TODO: Do something with the recoveredData.
 
