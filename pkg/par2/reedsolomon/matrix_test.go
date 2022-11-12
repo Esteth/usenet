@@ -278,3 +278,31 @@ func TestPlankPaperErrorRecovery(t *testing.T) {
 		t.Fatalf("recovered data %v not equal to expected data %v", recoveredData, data)
 	}
 }
+
+func BenchmarkAugment(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		m1, err := NewMatrix(1024*1024, 1024)
+		if err != nil {
+			b.Fatalf("could not create m1: %v", err)
+		}
+		m2, err := NewMatrix(1024*1024*3, 1024)
+		if err != nil {
+			b.Fatalf("could not create m2: %v", err)
+		}
+		m1.Augment(m2)
+	}
+}
+
+func BenchmarkAugmentVertical(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		m1, err := NewMatrix(1024*1024*3, 1024)
+		if err != nil {
+			b.Fatalf("could not create m1: %v", err)
+		}
+		m2, err := NewMatrix(1024*1024*3, 7)
+		if err != nil {
+			b.Fatalf("could not create m2: %v", err)
+		}
+		m1.AugmentVertical(m2)
+	}
+}

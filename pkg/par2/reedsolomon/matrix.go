@@ -202,11 +202,13 @@ func (m matrix) Augment(other matrix) (matrix, error) {
 	if len(m) != len(other) {
 		return nil, errRowSizeMismatch
 	}
-	newM := matrix(make([][]uint16, len(m)))
+	newM, err := NewMatrix(len(m), len(m[0])+len(other[0]))
+	if err != nil {
+		return nil, fmt.Errorf("could not create augmented matrix: %w", err)
+	}
 	for r := range m {
-		newM[r] = make([]uint16, 0, len(m[0])+len(other[0]))
-		newM[r] = append(newM[r], m[r]...)
-		newM[r] = append(newM[r], other[r]...)
+		copy(newM[r], m[r])
+		copy(newM[r][len(m[r]):], other[r])
 	}
 	return newM, nil
 }
@@ -217,13 +219,15 @@ func (m matrix) AugmentVertical(other matrix) (matrix, error) {
 	if len(m[0]) != len(other[0]) {
 		return nil, errColSizeMismatch
 	}
-	newM := matrix(make([][]uint16, 0, len(m)+len(other)))
+	newM, err := NewMatrix(len(m)+len(other), len(m[0]))
+	if err != nil {
+		return nil, fmt.Errorf("could not create new vertically augmented matrix: %w", err)
+	}
+
 	for r := range m {
-		newM = append(newM, make([]uint16, len(m[r])))
 		copy(newM[r], m[r])
 	}
 	for r := range other {
-		newM = append(newM, make([]uint16, len(m[r])))
 		copy(newM[r+len(m)], other[r])
 	}
 	return newM, nil
