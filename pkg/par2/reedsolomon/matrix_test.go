@@ -200,7 +200,7 @@ func TestAugmentVerticalCopies(t *testing.T) {
 		t.Fatalf("could not create expected result matrix: %v", err)
 	}
 	// Mutate an element of one of the original matrices before comparison
-	m2[0][0] = 0
+	m2.data[0] = 0
 	if !reflect.DeepEqual(augmentResult, expected) {
 		t.Fatalf("Result matrix %v not expected %v", augmentResult, expected)
 	}
@@ -262,7 +262,8 @@ func TestPlankPaperErrorRecovery(t *testing.T) {
 	}
 
 	// Delete some rows to pretend we lost some data
-	solve = append(solve[:4], solve[7:]...)
+	copy(solve.data[4*solve.cols:], solve.data[7*solve.cols:])
+	solve.rows -= 3
 
 	err = solve.GaussianElimination()
 	if err != nil {
@@ -270,8 +271,8 @@ func TestPlankPaperErrorRecovery(t *testing.T) {
 	}
 
 	recoveredData := make([]uint16, len(data))
-	for r, row := range solve {
-		recoveredData[r] = row[len(row)-1]
+	for r := 0; r < solve.rows; r++ {
+		recoveredData[r] = solve.cell(r, solve.cols-1)
 	}
 
 	if !reflect.DeepEqual(recoveredData, data) {
@@ -281,28 +282,16 @@ func TestPlankPaperErrorRecovery(t *testing.T) {
 
 func BenchmarkAugment(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		m1, err := NewMatrix(1024*1024, 1024)
-		if err != nil {
-			b.Fatalf("could not create m1: %v", err)
-		}
-		m2, err := NewMatrix(1024*1024*3, 1024)
-		if err != nil {
-			b.Fatalf("could not create m2: %v", err)
-		}
+		m1 := NewMatrix(1024, 1024)
+		m2 := NewMatrix(7, 1024)
 		m1.Augment(m2)
 	}
 }
 
 func BenchmarkAugmentVertical(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		m1, err := NewMatrix(1024*1024*3, 1024)
-		if err != nil {
-			b.Fatalf("could not create m1: %v", err)
-		}
-		m2, err := NewMatrix(1024*1024*3, 7)
-		if err != nil {
-			b.Fatalf("could not create m2: %v", err)
-		}
+		m1 := NewMatrix(1024, 1024)
+		m2 := NewMatrix(1024, 7)
 		m1.AugmentVertical(m2)
 	}
 }

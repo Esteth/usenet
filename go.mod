@@ -1,6 +1,6 @@
 module github.com/esteth/usenet
 
-go 1.18
+go 1.20
 
 require golang.org/x/net v0.0.0-20210510120150-4163338589ed
 
